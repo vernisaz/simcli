@@ -54,6 +54,13 @@ if let Some(OptVal::Arr(d_o)) = d_o {
 }
 ```
 
+Sometimes a user can misspell some option which can issue a wrong application behavior. Use the approach
+below to detect the situation:
+```rust
+if let Some(errors) = cli.get_errors() {
+    eprintln!("Unknown options - {errors:?}")
+}
+```
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml descriptor can be easy added, since there are no dependencies).

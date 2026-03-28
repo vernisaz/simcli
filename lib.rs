@@ -59,6 +59,7 @@ pub struct CLI {
     opts: Vec<CliOpt>,
     descr: Option<String>,
     unprocessed: bool,
+    unknown: Vec<String>,
 }
 impl CLI {
     /// Create an empty CLI arguments descriptor
@@ -69,6 +70,7 @@ impl CLI {
             opts: vec![],
             descr: None,
             unprocessed: true,
+            unknown: vec![],
         }
     }
 
@@ -147,7 +149,21 @@ impl CLI {
         if self.unprocessed {
             self.parse()
         }
+        if self.unprocessed {
+            self.parse()
+        }
         &self.args
+    }
+
+    /// Get errors
+    ///
+    /// Returns a vector of unrecognized options or None
+    pub fn get_errors(&self) -> Option<&Vec<String>> {
+        if self.unknown.is_empty() {
+            None
+        } else {
+            Some(&self.unknown)
+        }
     }
 
     fn parse(&mut self) {
@@ -156,6 +172,7 @@ impl CLI {
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 // TODO eat extra -'s
+                let mut consumed = false;
                 for opt in &mut self.opts {
                     if opt.nme == sarg {
                         match opt.t {
@@ -183,6 +200,7 @@ impl CLI {
                             }
                             OptTyp::InStr => (),
                         }
+                        consumed = true;
                     } else if opt.t == OptTyp::InStr && sarg.starts_with(&opt.nme) {
                         if opt.v.is_none() {
                             opt.v = Some(OptVal::Arr(HashSet::new()))
@@ -205,10 +223,15 @@ impl CLI {
                                 opt.v = Some(OptVal::Arr(HashSet::new()))
                             }
                         }
+                        consumed = true;
                     } else if opt.nme.len() == 1 && sarg.contains(&opt.nme) && opt.t == OptTyp::None
                     {
                         opt.v = Some(OptVal::Empty);
+                        consumed = true;
                     }
+                }
+                if !consumed {
+                    self.unknown.push(arg)
                 }
             } else {
                 self.args.push(arg)

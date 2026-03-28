@@ -12,6 +12,7 @@ fn test_cli(cli: &mut CLI) {
         _ => (),
     }
     let _ = cli.opt("c", OptTyp::None).inspect_err(|e| eprintln!("{e}"));
+
     let d_o = cli.get_opt("D");
     if let Some(OptVal::Arr(d_o)) = d_o {
         for (i, d) in d_o.into_iter().enumerate() {
@@ -21,6 +22,12 @@ fn test_cli(cli: &mut CLI) {
         eprintln!("no def found")
     }
     let _ = cli.opt("X", OptTyp::Str).inspect_err(|e| eprintln!("{e}"));
+    for arg in cli.args() {
+        println!("arg - {arg}")
+    }
+    if let Some(errors) = cli.get_errors() {
+        eprintln!("Unknown options - {errors:?}")
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
