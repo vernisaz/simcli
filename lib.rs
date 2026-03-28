@@ -37,6 +37,12 @@ impl fmt::Display for OptError {
     }
 }
 impl std::error::Error for OptError {}
+impl Default for CLI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Provides an argument description
 ///
 pub struct CliOpt {
