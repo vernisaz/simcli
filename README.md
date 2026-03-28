@@ -14,7 +14,7 @@ some accordingly your needs.
 - mixed list of arguments and options
 - use a platform specific option flag, like `-` for Unix and `/` for Windows
 - errors detection as in defining options as in the processing them
-- automatic help and decription generation
+- automatic help and description generation
 - specifying a type and range of arguments
  
 
@@ -23,26 +23,26 @@ some accordingly your needs.
 Define the arguments first,
 ```Rust
 let mut cli = CLI::new();
-cli.opt("n", OptTyp::Num)?.description("Number liof nes")
+cli.opt("n", OptTyp::Num)?.description("Number of lines")
     .opt("v", OptTyp::None)?.description("Version").opt("h", OptTyp::None)?;
 ```
 
 You can pull the required arguments after,
 ```rust
-let lns = match cli.get_opt("n") {
-    Some(OptVal::Num(n)) => *n as usize,
-    _ => 15usize
-};
 if cli.get_opt("v") == Some(&OptVal::Empty) {
     return Ok(println!("\nVersion {VERSION}"))
 } else if cli.get_opt("h") == Some(&OptVal::Empty) {
     return Ok(println!("simtail [opts] <file path>[ ...<file path>]\n{}", cli.get_description()?))
 }
+let lns = match cli.get_opt("n") {
+    Some(OptVal::Num(n)) => *n as usize,
+    _ => 15usize
+};
 tail_of(&cli.args().first()?, lns)?;
 ```
 
-If you have arguments in the form like - *-Xname=value*, then you can define them 
-using the code bellow
+If you have arguments in a form like - *-Xname=value*, then you can define them 
+using the code bellow,
 ```rust
 cli.opt("D", OptTyp::InStr)?.description("A definition as name=value");
 // and then read their presences in the command line
