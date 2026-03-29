@@ -57,6 +57,7 @@ pub struct CliOpt {
 ///
 #[allow(clippy::upper_case_acronyms)]
 pub struct CLI {
+    // TODO: use Cell for bool and RefCell for the rest fields to avoid using &mut self
     args: Vec<String>,
     opts: Vec<CliOpt>,
     descr: Option<String>,
@@ -126,11 +127,7 @@ impl CLI {
                 descr += &format!("\t{some_descr}")
             }
         }
-        if descr.is_empty() {
-            None
-        } else {
-            Some(descr)
-        }
+        if descr.is_empty() { None } else { Some(descr) }
     }
     /// Get a CLI option
     ///
