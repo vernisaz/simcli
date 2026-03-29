@@ -6,6 +6,8 @@ const OPT_PREFIX: char = '-';
 const OPT_PREFIX: char = '/';
 const VERSION: &str = env!("VERSION");
 
+/// Returns a version of the create
+///
 pub fn get_version() -> &'static str {
     VERSION
 }
