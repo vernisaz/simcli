@@ -151,16 +151,16 @@ impl CLI {
         if self.unprocessed {
             self.parse()
         }
-        if self.unprocessed {
-            self.parse()
-        }
         &self.args
     }
 
     /// Get errors
     ///
     /// Returns a vector of unrecognized options or None
-    pub fn get_errors(&self) -> Option<&Vec<String>> {
+    pub fn get_errors(&mut self) -> Option<&Vec<String>> {
+        if self.unprocessed {
+            self.parse()
+        }
         if self.unknown.is_empty() {
             None
         } else {
