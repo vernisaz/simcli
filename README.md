@@ -1,4 +1,4 @@
-# Simple CLI options processor
+# Simple CLI arguments processor
 
 ## Purpose
 Surprisingly, but AI doesn't give any simple and powerful command line arguments processor.
@@ -66,4 +66,4 @@ if let Some(errors) = cli.get_errors() {
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml descriptor can be easy added, since there are no dependencies).
-Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when use *RB*.
+Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when you use *RB*.
