@@ -22,6 +22,8 @@ some accordingly your needs.
 
 Define the arguments first,
 ```Rust
+use simcli::{OptTyp,OptVal,CLI};
+...
 let mut cli = CLI::new();
 cli.opt("n", OptTyp::Num)?.description("Number of lines")
     .opt("v", OptTyp::None)?.description("Version").opt("h", OptTyp::None)?;
