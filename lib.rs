@@ -58,11 +58,11 @@ pub struct CliOpt {
 #[allow(clippy::upper_case_acronyms)]
 pub struct CLI {
     // TODO: use Cell for bool and RefCell for the rest fields to avoid using &mut self
-    args: Vec<String>,
-    opts: Vec<CliOpt>,
+    args: Vec<String>, // RefCell
+    opts: Vec<CliOpt>, // RefCell
     descr: Option<String>,
-    unprocessed: bool,
-    unknown: Vec<String>,
+    unprocessed: bool,    // Cell
+    unknown: Vec<String>, // RefCell
 }
 impl CLI {
     /// Create an empty CLI arguments descriptor

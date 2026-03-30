@@ -20,7 +20,9 @@ fn test_cli(cli: &mut CLI) -> Result<(), Box<dyn Error>> {
             .opt("h", OptTyp::None)?
             .description("Print help")
             .opt("v", OptTyp::None)?
-            .description("Print version");
+            .description("Print version")
+            .opt("-long", OptTyp::Str)?
+            .description("Long definition");
 
         let d_o = cli.get_opt("D");
         if let Some(OptVal::Arr(d_o)) = d_o {
@@ -29,6 +31,9 @@ fn test_cli(cli: &mut CLI) -> Result<(), Box<dyn Error>> {
             }
         } else {
             eprintln!("no def  found")
+        }
+        if let Some(OptVal::Str(value)) = cli.get_opt("-long") {
+            println!("long - {value}")
         }
         let _ = cli.opt("X", OptTyp::Str).inspect_err(|e| eprintln!("{e}"));
         for arg in cli.args() {
