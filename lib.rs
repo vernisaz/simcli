@@ -11,6 +11,14 @@ const VERSION: &str = env!("VERSION");
 pub fn get_version() -> &'static str {
     VERSION
 }
+
+/// Specify types of command line options
+///
+/// * Num - integer number
+/// * FNum - float number
+/// * Str - string
+/// * InStr - property definition in a form like name=value
+/// * None - no value
 #[derive(PartialEq)]
 #[allow(dead_code)]
 pub enum OptTyp {
@@ -20,6 +28,9 @@ pub enum OptTyp {
     InStr,
     None,
 }
+
+/// Specify possible values of command line options
+///
 #[derive(PartialEq, Debug)]
 pub enum OptVal {
     Num(i64),
@@ -53,6 +64,7 @@ pub struct CliOpt {
     nme: String,
     descr: Option<String>,
 }
+
 /// Defines combined storage for CLI argements description and real arguments data
 ///
 #[allow(clippy::upper_case_acronyms)]
