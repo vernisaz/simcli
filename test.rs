@@ -35,6 +35,12 @@ fn test_cli(cli: &mut CLI) -> Result<(), Box<dyn Error>> {
         if let Some(OptVal::Str(value)) = cli.get_opt("-long") {
             println!("long - {value}")
         }
+        if cli.get_opt("k").is_some() {
+            println!("k is defined")
+        }
+        if cli.get_opt("v").is_some() {
+            println!("version - {}", simcli::get_version())
+        }
         let _ = cli.opt("X", OptTyp::Str).inspect_err(|e| eprintln!("{e}"));
         for arg in cli.args() {
             println!("arg - {arg}")
