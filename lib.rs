@@ -69,10 +69,11 @@ pub struct CliOpt {
 ///
 #[allow(clippy::upper_case_acronyms)]
 pub struct CLI {
-    // TODO: use Cell for bool and RefCell for the rest fields to avoid using &mut self
+    // TODO: type CLI_MUT =  (RefCell<CLI>) for to avoid using &mut self
     args: Vec<String>, // RefCell
     opts: Vec<CliOpt>, // RefCell
     descr: Option<String>,
+    oper: Option<String>,
     unprocessed: bool,    // Cell
     unknown: Vec<String>, // RefCell
 }
@@ -84,6 +85,7 @@ impl CLI {
             args: vec![],
             opts: vec![],
             descr: None,
+            oper: Default::default(),
             unprocessed: true,
             unknown: vec![],
         }
@@ -154,6 +156,17 @@ impl CLI {
         }
         None
     }
+    /// Returns first argument as an operation
+    ///
+    /// some CLI tools, as git consider first argument as operation/command
+    ///
+    /// the argument will be also added in arguments vec itself
+    pub fn get_oper(&mut self) -> Option<&String> {
+        if self.unprocessed {
+            self.parse()
+        }
+        self.oper.as_ref()
+    }
     /// Get CLI arguments
     ///
     pub fn args(&mut self) -> &Vec<String> {
@@ -180,6 +193,7 @@ impl CLI {
     fn parse(&mut self) {
         let mut args = env::args();
         args.next(); // swallow first
+        let mut first = true;
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 // TODO eat extra -'s
@@ -245,8 +259,12 @@ impl CLI {
                     self.unknown.push(arg)
                 }
             } else {
+                if self.oper.is_none() && first {
+                    self.oper = Some(arg.clone())
+                }
                 self.args.push(arg)
             }
+            first = false;
         }
         self.unprocessed = false
     }
