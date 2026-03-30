@@ -41,9 +41,11 @@ let lns = match cli.get_opt("n") {
     _ => 15usize
 };
 tail_of(&cli.args().first()?, lns)?;
+...
+Ok(());
 ```
 
-If you have arguments in a form like - *-Xname=value*, then you can define them 
+If you have arguments in a form like - `-Xname=value`, then you can define them 
 using the code bellow,
 ```rust
 cli.opt("D", OptTyp::InStr)?.description("A definition as name=value");
