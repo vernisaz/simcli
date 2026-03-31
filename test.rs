@@ -22,9 +22,15 @@ fn test_cli(cli: &mut CLI) -> Result<(), Box<dyn Error>> {
             .opt("v", OptTyp::None)?
             .description("Print version")
             .opt("-long", OptTyp::Str)?
-            .description("Long definition").use_oper().oper_description(r#"add - add,
+            .description("Long definition")
+            .use_oper()
+            .oper_description(
+                r#"Where operations are:
+add - add,
 delete - delete,
-commit - commit"#)?;
+commit - commit.
+And options are:"#,
+            )?;
 
         let d_o = cli.get_opt("D");
         if let Some(OptVal::Arr(d_o)) = d_o {
