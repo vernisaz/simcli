@@ -74,6 +74,8 @@ pub struct CLI {
     opts: Vec<CliOpt>, // RefCell
     descr: Option<String>,
     oper: Option<String>,
+    oper_requested: bool,
+    oper_descr: Option<String>,
     unprocessed: bool,    // Cell
     unknown: Vec<String>, // RefCell
 }
@@ -86,6 +88,8 @@ impl CLI {
             opts: vec![],
             descr: None,
             oper: Default::default(),
+            oper_requested: false,
+            oper_descr: Default::default(),
             unprocessed: true,
             unknown: vec![],
         }
@@ -128,12 +132,32 @@ impl CLI {
         }
         self
     }
+    /// Use an operation as the first arguments
+    ///
+    pub fn use_oper(&mut self) -> &mut Self {
+        self.oper_requested = true;
+        self
+    }
+    /// Specify operation description
+    ///
+    pub fn oper_description(&mut self, descr: &str) -> Result<&mut Self, OptError> {
+        if !self.oper_requested {
+        Err(OptError {
+                cause: format!("an operation description can be defined after a set - use_oper"),
+            })
+            } else {
+        self.oper_descr = Some(descr.to_string());
+        Ok(self)}
+    }
     /// Get the CLI description
     ///
     pub fn get_description(&self) -> Option<String> {
         let mut descr = String::new();
         if let Some(some_descr) = &self.descr {
             descr += some_descr
+        }
+        if let Some(some_descr) = &self.oper_descr {
+            descr += &format!("\n{some_descr}")
         }
         for opt in &self.opts {
             descr += &format!("\n{OPT_PREFIX}{}", opt.nme);
@@ -193,7 +217,6 @@ impl CLI {
     fn parse(&mut self) {
         let mut args = env::args();
         args.next(); // swallow first
-        let mut first = true;
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 // TODO eat extra -'s
@@ -259,12 +282,13 @@ impl CLI {
                     self.unknown.push(arg)
                 }
             } else {
-                if self.oper.is_none() && first {
+                if self.oper.is_none() && self.oper_requested {
                     self.oper = Some(arg.clone())
+                } else {
+                    self.args.push(arg)
                 }
-                self.args.push(arg)
             }
-            first = false;
+            self.oper_requested = false;
         }
         self.unprocessed = false
     }
