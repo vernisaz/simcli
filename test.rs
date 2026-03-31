@@ -53,6 +53,11 @@ And options are:"#,
         for arg in cli.args() {
             println!("arg - {arg}")
         }
+        if let Some(oper) = cli.get_oper() {
+            println!("operation - {oper} is rquested")
+        } else {
+            eprintln!("no operation specified")
+        }
         if let Some(errors) = cli.get_errors() {
             eprintln!("Unknown options - {errors:?}")
         }

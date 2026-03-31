@@ -58,6 +58,19 @@ if let Some(OptVal::Arr(d_o)) = d_o {
 }
 ```
 
+If the syntax of CLI command is similar to `git`, when the first argument specifies an operation, then it can be
+requested as:
+```rust
+cli.use_oper()
+   .oper_description(
+                r#"Where operations are:
+add - add,
+delete - delete,
+commit - commit.
+And options are:"#,
+)?;
+```
+
 Sometimes a user can misspell some option which can issue a wrong application behavior. Use the approach
 below to detect the situation:
 ```rust
