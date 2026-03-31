@@ -138,16 +138,17 @@ impl CLI {
         self.oper_requested = true;
         self
     }
-    /// Specify operation description
+    /// Specify an operation description
     ///
     pub fn oper_description(&mut self, descr: &str) -> Result<&mut Self, OptError> {
         if !self.oper_requested {
-        Err(OptError {
-                cause: format!("an operation description can be defined after a set - use_oper"),
+            Err(OptError {
+                cause: format!("an operation description can be defined after a set - use_oper()"),
             })
-            } else {
-        self.oper_descr = Some(descr.to_string());
-        Ok(self)}
+        } else {
+            self.oper_descr = Some(descr.to_string());
+            Ok(self)
+        }
     }
     /// Get the CLI description
     ///
