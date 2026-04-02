@@ -58,7 +58,7 @@ if let Some(OptVal::Arr(d_o)) = d_o {
 }
 ```
 
-If the syntax of CLI command is similar to `git`, when the first argument specifies an operation, then it can be
+If a syntax of CLI command is similar to used by `git`, when the first argument specifies an operation, then it can be
 requested as:
 ```rust
 cli.use_oper()
@@ -78,6 +78,10 @@ if let Some(errors) = cli.get_errors() {
     eprintln!("Unknown options - {errors:?}")
 }
 ```
+
+Since CLI requires mutability, you can also use `CliNoMut` immutable variant, however it
+can consume more memory.
+
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml descriptor can be easy added, since there are no dependencies).
