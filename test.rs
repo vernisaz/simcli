@@ -1,10 +1,10 @@
-use simcli::CLI;
+use simcli::CliNoMut;
 use simcli::OptTyp;
 use simcli::OptVal;
 use std::error::Error;
 
 #[cfg(test)]
-fn test_cli(cli: &mut CLI) -> Result<(), Box<dyn Error>> {
+fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
     {
         match cli.opt("D", OptTyp::InStr) {
             Ok(ref mut cli) => {
@@ -63,11 +63,10 @@ And options are:"#,
         }
     }
     if let Some(OptVal::Str(name)) = cli.get_opt("n") {
-        let name = name.clone();
         for _ in 0..if let Some(OptVal::Num(count)) = cli.get_opt("c")
-            && *count > 0
+            && count > 0
         {
-            *count
+            count
         } else {
             1
         } {
@@ -80,8 +79,8 @@ And options are:"#,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut cli = CLI::new();
+    let cli = CliNoMut::new();
     cli.description("For testing CLI module");
     #[cfg(test)]
-    test_cli(&mut cli)
+    test_cli(&cli)
 }
