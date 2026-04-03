@@ -66,13 +66,13 @@ And options are:"#,
         for _ in 0..if let Some(OptVal::Num(count)) = cli.get_opt("c")
             && count > 0
         {
-            count
+            dbg!(count)
         } else {
             1
         } {
             println!("Hello {name}!");
         }
-    } else {
+    } else if cli.get_opt("h").is_some() || cli.get_errors().is_some() {
         eprintln!("{}", cli.get_description().unwrap())
     }
     Ok(())
