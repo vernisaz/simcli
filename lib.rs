@@ -220,7 +220,6 @@ impl CLI {
         args.next(); // swallow first
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
-                // TODO eat extra -'s
                 let mut consumed = false;
                 for opt in &mut self.opts {
                     if opt.nme == sarg {
@@ -269,7 +268,10 @@ impl CLI {
                             }
                             _ => {
                                 // somehow to report data inconsistency
-                                opt.v = Some(OptVal::Arr(HashSet::new()))
+                                unreachable!(
+                                    "Can't argument in format -Xname=value become a different type"
+                                )
+                                //opt.v = Some(OptVal::Arr(HashSet::new()))
                             }
                         }
                         consumed = true;
