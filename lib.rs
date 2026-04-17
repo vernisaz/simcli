@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashSet, env, fmt};
+use std::{cell::RefCell, cmp::Ordering, collections::HashSet, env, fmt};
 
 #[cfg(unix)]
 const OPT_PREFIX: char = '-';
@@ -19,7 +19,7 @@ pub fn get_version() -> &'static str {
 /// * Str - string
 /// * InStr - property definition in a form like name=value
 /// * None - no value
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 #[allow(dead_code)]
 pub enum OptTyp {
     Num,
@@ -58,11 +58,33 @@ impl Default for CLI {
 
 /// Provides an argument description
 ///
+#[derive(Debug)]
 pub struct CliOpt {
     t: OptTyp,
     v: Option<OptVal>,
     nme: String,
     descr: Option<String>,
+}
+
+impl PartialEq for CliOpt {
+    fn eq(&self, other: &Self) -> bool {
+        self.nme == other.nme
+    }
+}
+impl Eq for CliOpt {}
+
+// Implement PartialOrd
+impl PartialOrd for CliOpt {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other)) // Delegate to Ord's cmp
+    }
+}
+
+// Implement Ord (total ordering)
+impl Ord for CliOpt {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.nme.cmp(&other.nme)
+    }
 }
 
 /// Defines combined storage for CLI argements description and real arguments data
@@ -291,6 +313,7 @@ impl CLI {
             }
             self.oper_requested = false;
         }
+        self.opts.sort();
         self.unprocessed = false
     }
 }
