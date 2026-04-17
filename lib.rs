@@ -131,7 +131,7 @@ impl CLI {
         }
         self
     }
-    /// Use an operation as the first arguments
+    /// Use an operation as the first argument
     ///
     pub fn use_oper(&mut self) -> &mut Self {
         self.oper_requested = true;
@@ -183,7 +183,7 @@ impl CLI {
     }
     /// Returns first argument as an operation
     ///
-    /// some CLI tools, as git consider first argument as operation/command
+    /// Some CLI tools, as git, consider the first argument as an operation/command
     ///
     /// the argument will be also added in arguments vec itself
     pub fn get_oper(&mut self) -> Option<&String> {
@@ -194,6 +194,7 @@ impl CLI {
     }
     /// Get CLI arguments
     ///
+    /// The returned list doesn't include the command, if it is definedned
     pub fn args(&mut self) -> &Vec<String> {
         if self.unprocessed {
             self.parse()
@@ -334,7 +335,7 @@ impl CliNoMut {
         let _ = cli.description(descr);
         self
     }
-    /// Use an operation as the first arguments
+    /// Use an operation as the first argument
     ///
     pub fn use_oper(&self) -> &Self {
         let mut cli = self.cli.borrow_mut();
@@ -363,7 +364,7 @@ impl CliNoMut {
     }
     /// Returns first argument as an operation
     ///
-    /// some CLI tools, as git consider first argument as operation/command
+    /// Some CLI tools, as git, consider the first argument as an operation/command
     ///
     /// the argument will be also added in arguments vec itself
     pub fn get_oper(&self) -> Option<String> {
@@ -371,6 +372,7 @@ impl CliNoMut {
     }
     /// Get CLI arguments
     ///
+    /// The operation isn't included when specified
     pub fn args(&self) -> Vec<String> {
         self.cli.borrow_mut().args().clone()
     }
