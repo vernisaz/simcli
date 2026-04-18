@@ -50,7 +50,12 @@ And options are:"#,
             println!("version - {}", simcli::get_version())
         }
         let _ = cli.opt("X", OptTyp::Str).inspect_err(|e| eprintln!("{e}"));
-        for arg in cli.args() {
+        let pure_args = if cli.get_oper().is_some() {
+            &cli.args()[1..]
+        } else {
+            &cli.args()
+        };
+        for arg in pure_args {
             println!("arg - {arg}")
         }
         if let Some(oper) = cli.get_oper() {

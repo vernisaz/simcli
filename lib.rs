@@ -207,7 +207,15 @@ impl CLI {
     ///
     /// Some CLI tools, as git, consider the first argument as an operation/command
     ///
-    /// the argument will be also added in arguments vec itself
+    /// The argument will be also added in the arguments vec itself, so use a slice to get
+    /// pure arguments, like:
+    /// ```rust
+    /// let args = if cli.get_oper() . is_some() {
+    ///     &cli.args()[1..]
+    ///   } else {
+    ///     &cli.args()
+    /// };
+    /// ```
     pub fn get_oper(&mut self) -> Option<&String> {
         if self.unprocessed {
             self.parse()
