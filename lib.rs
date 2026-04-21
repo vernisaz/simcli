@@ -205,17 +205,9 @@ impl CLI {
     }
     /// Returns first argument as an operation
     ///
-    /// Some CLI tools, as git, consider the first argument as an operation/command
+    /// Some CLI tools, like git, consider the first argument as an operation/command
     ///
-    /// The argument will be also added in the arguments vec itself, so use a slice to get
-    /// pure arguments, like:
-    /// ```rust
-    /// let args = if cli.get_oper() . is_some() {
-    ///     &cli.args()[1..]
-    ///   } else {
-    ///     &cli.args()
-    /// };
-    /// ```
+    /// The argument will be excluded from the arguments list
     pub fn get_oper(&mut self) -> Option<&String> {
         if self.unprocessed {
             self.parse()
@@ -224,7 +216,7 @@ impl CLI {
     }
     /// Get CLI arguments
     ///
-    /// The returned list doesn't include the command, if it is definedned
+    /// The returned list doesn't include the command, if it is defined
     pub fn args(&mut self) -> &Vec<String> {
         if self.unprocessed {
             self.parse()
