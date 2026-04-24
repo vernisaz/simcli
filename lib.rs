@@ -68,7 +68,17 @@ pub struct CliOpt {
 
 impl PartialEq for CliOpt {
     fn eq(&self, other: &Self) -> bool {
-        self.nme == other.nme
+        let self_nam = if self.nme.as_bytes()[0] == b'-' {
+            &self.nme[1..]
+        } else {
+            &self.nme[..]
+        };
+        let other_nam = if other.nme.as_bytes()[0] == b'-' {
+            &other.nme[1..]
+        } else {
+            &other.nme[..]
+        };
+        *self_nam == *other_nam
     }
 }
 impl Eq for CliOpt {}
@@ -76,14 +86,34 @@ impl Eq for CliOpt {}
 // Implement PartialOrd
 impl PartialOrd for CliOpt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other)) // Delegate to Ord's cmp
+        let self_nam = if self.nme.as_bytes()[0] == b'-' {
+            &self.nme[1..]
+        } else {
+            &self.nme[..]
+        };
+        let other_nam = if other.nme.as_bytes()[0] == b'-' {
+            &other.nme[1..]
+        } else {
+            &other.nme[..]
+        };
+        Some(self_nam.cmp(other_nam)) // Delegate to Ord's cmp
     }
 }
 
 // Implement Ord (total ordering)
 impl Ord for CliOpt {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.nme.cmp(&other.nme)
+        let self_nam = if self.nme.as_bytes()[0] == b'-' {
+            &self.nme[1..]
+        } else {
+            &self.nme[..]
+        };
+        let other_nam = if other.nme.as_bytes()[0] == b'-' {
+            &other.nme[1..]
+        } else {
+            &other.nme[..]
+        };
+        self_nam.cmp(other_nam)
     }
 }
 
