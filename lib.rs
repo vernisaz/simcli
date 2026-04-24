@@ -273,8 +273,9 @@ impl CLI {
         args.next(); // swallow first
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
-                let mut consumed = false;
+                let mut string = sarg.to_string();
                 for opt in &mut self.opts {
+                    //eprintln!("checking {} ags {string}", opt.nme);
                     if opt.nme == sarg {
                         match opt.t {
                             OptTyp::Num => {
@@ -301,7 +302,7 @@ impl CLI {
                             }
                             OptTyp::InStr => (),
                         }
-                        consumed = true;
+                        string.clear();
                     } else if opt.t == OptTyp::InStr && sarg.starts_with(&opt.nme) {
                         if opt.v.is_none() {
                             opt.v = Some(OptVal::Arr(HashSet::new()))
@@ -327,15 +328,46 @@ impl CLI {
                                 //opt.v = Some(OptVal::Arr(HashSet::new()))
                             }
                         }
-                        consumed = true;
-                    } else if opt.nme.len() == 1 && sarg.contains(&opt.nme) && opt.t == OptTyp::None
+                        string.clear();
+                    } else if opt.t == OptTyp::None
+                        && opt.nme.chars().count() == 1
+                        && sarg.contains(&opt.nme)
                     {
                         opt.v = Some(OptVal::Empty);
-                        consumed = true;
+                        string.retain(|c| c != opt.nme.chars().next().unwrap());
+                    } else if let Some(last) = string.chars().last()
+                        && opt.nme.chars().count() == 1
+                        && opt.nme.chars().next().unwrap() == last
+                    {
+                        string.retain(|c| c != last);
+                        match opt.t {
+                            OptTyp::Num => {
+                                if let Some(val) = args.next() {
+                                    match val.parse::<i64>() {
+                                        Ok(num) => opt.v = Some(OptVal::Num(num)),
+                                        _ => opt.v = Some(OptVal::Unmatch),
+                                    }
+                                }
+                            }
+                            OptTyp::FNum => {
+                                if let Some(val) = args.next() {
+                                    match val.parse::<f64>() {
+                                        Ok(num) => opt.v = Some(OptVal::FNum(num)),
+                                        _ => opt.v = Some(OptVal::Unmatch),
+                                    }
+                                }
+                            }
+                            OptTyp::Str => {
+                                if let Some(str) = args.next() {
+                                    opt.v = Some(OptVal::Str(str))
+                                }
+                            }
+                            OptTyp::InStr | OptTyp::None => (),
+                        }
                     }
                 }
-                if !consumed {
-                    self.unknown.push(arg)
+                if !string.is_empty() {
+                    self.unknown.push(string)
                 }
             } else if self.oper.is_none() && self.oper_requested {
                 self.oper = Some(arg.clone())
