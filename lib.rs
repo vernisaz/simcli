@@ -86,17 +86,7 @@ impl Eq for CliOpt {}
 // Implement PartialOrd
 impl PartialOrd for CliOpt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_nam = if self.nme.as_bytes()[0] == b'-' {
-            &self.nme[1..]
-        } else {
-            &self.nme[..]
-        };
-        let other_nam = if other.nme.as_bytes()[0] == b'-' {
-            &other.nme[1..]
-        } else {
-            &other.nme[..]
-        };
-        Some(self_nam.cmp(other_nam)) // Delegate to Ord's cmp
+        Some(self.cmp(other)) // Delegate to Ord's cmp
     }
 }
 
