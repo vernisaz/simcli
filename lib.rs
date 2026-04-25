@@ -264,6 +264,7 @@ impl CLI {
         while let Some(arg) = args.next() {
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 let mut string = sarg.to_string();
+                let mut was_input_opt = false;
                 for opt in &mut self.opts {
                     //eprintln!("checking {} ags {string}", opt.nme);
                     if opt.nme == sarg {
@@ -328,8 +329,8 @@ impl CLI {
                     } else if let Some(last) = string.chars().last()
                         && opt.nme.chars().count() == 1
                         && opt.nme.chars().next().unwrap() == last
+                        && !was_input_opt
                     {
-                        string.retain(|c| c != last);
                         match opt.t {
                             OptTyp::Num => {
                                 if let Some(val) = args.next() {
@@ -352,8 +353,10 @@ impl CLI {
                                     opt.v = Some(OptVal::Str(str))
                                 }
                             }
-                            OptTyp::InStr | OptTyp::None => (),
+                            OptTyp::InStr | OptTyp::None => continue, // TODO maybe add some error handling
                         }
+                        was_input_opt = true;
+                        string.retain(|c| c != last);
                     }
                 }
                 if !string.is_empty() {
