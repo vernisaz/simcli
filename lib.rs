@@ -102,12 +102,12 @@ impl Glob {
             } else {
                 current_dir().unwrap_or_default().join(&parent).read_dir()
             }
-            .unwrap();
+            .ok();
             let before = before.to_string();
             let after = after.to_string();
             Glob {
                 parent: Some(parent),
-                dir: Some(dir),
+                dir,
                 before,
                 after,
             }
