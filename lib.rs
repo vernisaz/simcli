@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     collections::HashSet,
     env::{self, current_dir},
+    ffi::{OsStr, OsString},
     fmt,
     fs::ReadDir,
     path::PathBuf,
@@ -86,8 +87,8 @@ pub struct CliOpt {
 struct Glob {
     parent: Option<PathBuf>,
     dir: Option<ReadDir>,
-    before: String,
-    after: String,
+    before: OsString,
+    after: OsString,
 }
 impl Glob {
     fn from(str: &str) -> Self {
@@ -103,8 +104,8 @@ impl Glob {
                 current_dir().unwrap_or_default().join(&parent).read_dir()
             }
             .unwrap();
-            let before = before.to_string();
-            let after = after.to_string();
+            let before = OsStr::new(before).to_os_string();
+            let after = OsStr::new(after).to_os_string();
             Glob {
                 parent: Some(parent),
                 dir: Some(dir),
@@ -115,8 +116,8 @@ impl Glob {
             Glob {
                 parent: Some(parent),
                 dir: None,
-                before: String::new(),
-                after: String::new(),
+                before: OsString::new(),
+                after: OsString::new(),
             }
         }
     }
@@ -133,17 +134,22 @@ impl Iterator for Glob {
                     None => break None,
                     Some(entry) => {
                         if let Ok(entry) = entry {
-                            let file_name = entry.file_name().display().to_string();
+                            let file_name = entry.file_name();
                             if file_name.len() > pattern_len
-                                && file_name.starts_with(&self.before)
-                                && file_name.ends_with(&self.after)
+                                && (self.before.is_empty()
+                                    || file_name.as_encoded_bytes()[..self.before.len()]
+                                        == *self.before.as_encoded_bytes())
+                                && (self.after.is_empty()
+                                    || file_name.as_encoded_bytes()
+                                        [file_name.len() - self.after.len()..]
+                                        == self.after.as_encoded_bytes()[..])
                             {
                                 if let Some(parent) = &self.parent {
                                     let mut parent = parent.clone();
                                     parent.push(entry.file_name());
                                     break Some(parent.display().to_string());
                                 } else {
-                                    break Some(file_name);
+                                    break Some(file_name.display().to_string());
                                 }
                             } else {
                                 continue;
@@ -161,6 +167,7 @@ impl Iterator for Glob {
         }
     }
 }
+
 impl PartialEq for CliOpt {
     fn eq(&self, other: &Self) -> bool {
         let self_nam = if self.nme.as_bytes()[0] == b'-' {
@@ -464,7 +471,7 @@ impl CLI {
                 }
             } else if self.oper.is_none() && self.oper_requested {
                 self.oper = Some(arg.clone())
-            } else if !cfg!(Windows) {
+            } else if !cfg!(windows) {
                 self.args.push(arg)
             } else {
                 match self.glob_mode {
