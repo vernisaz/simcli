@@ -1,5 +1,4 @@
-use simcli::{CliNoMut,OptTyp,
-OptVal,WildCardExpansion};
+use simcli::{CliNoMut, OptTyp, OptVal, WildCardExpansion};
 use std::error::Error;
 
 #[cfg(test)]
@@ -30,7 +29,7 @@ delete - delete,
 commit - commit.
 And options are:"#,
             )?;
-let _ = cli.process_wildcard(WildCardExpansion::All);
+        let _ = cli.process_wildcard(WildCardExpansion::All);
         let d_o = cli.get_opt("D");
         if let Some(OptVal::Arr(d_o)) = d_o {
             for (i, d) in d_o.into_iter().enumerate() {
