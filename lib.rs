@@ -136,18 +136,17 @@ impl Iterator for Glob {
                         if let Ok(entry) = entry {
                             let file_name = entry.file_name();
                             if file_name.len() > pattern_len
-                                && (self.before.is_empty()
-                                    || file_name.as_encoded_bytes()[..self.before.len()]
-                                        == *self.before.as_encoded_bytes())
-                                && (self.after.is_empty()
-                                    || file_name.as_encoded_bytes()
-                                        [file_name.len() - self.after.len()..]
-                                        == self.after.as_encoded_bytes()[..])
+                                && file_name
+                                    .as_encoded_bytes()
+                                    .starts_with(self.before.as_encoded_bytes())
+                                && file_name
+                                    .as_encoded_bytes()
+                                    .ends_with(self.after.as_encoded_bytes())
                             {
                                 if let Some(parent) = &self.parent {
-                                    let mut parent = parent.clone();
-                                    parent.push(entry.file_name());
-                                    break Some(parent.display().to_string());
+                                    break Some(
+                                        parent.join(entry.file_name()).display().to_string(),
+                                    );
                                 } else {
                                     break Some(file_name.display().to_string());
                                 }
