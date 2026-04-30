@@ -1,4 +1,4 @@
-use std::{cell::RefCell, cmp::Ordering, collections::HashSet, env, fmt};
+use std::{cell::RefCell, cmp::Ordering, collections::HashSet, env::{self,current_dir}, fmt, path::PathBuf, fs::ReadDir,};
 
 #[cfg(unix)]
 const OPT_PREFIX: char = '-';
@@ -19,14 +19,28 @@ pub fn get_version() -> &'static str {
 /// * Str - string
 /// * InStr - property definition in a form like name=value
 /// * None - no value
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 #[allow(dead_code)]
 pub enum OptTyp {
     Num,
     FNum,
     Str,
     InStr,
+    #[default]
     None,
+}
+
+/// Specify if a wild card in argument should be treated as for Windows
+///
+/// * None - not treated
+/// * Once - only one time first match
+/// * All - occurance
+#[derive(PartialEq, Debug, Default)]
+pub enum WildCardExpansion {
+#[default]
+    None,
+    Once,
+    All
 }
 
 /// Specify possible values of command line options
@@ -50,11 +64,6 @@ impl fmt::Display for OptError {
     }
 }
 impl std::error::Error for OptError {}
-impl Default for CLI {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 /// Provides an argument description
 ///
@@ -66,6 +75,87 @@ pub struct CliOpt {
     descr: Option<String>,
 }
 
+struct Glob {
+    parent: Option<PathBuf>,
+    dir: Option<ReadDir>,
+    before: String,
+    after: String,
+}
+impl Glob {
+    fn from(str: &str) -> Self {
+        let mut parent = PathBuf::from(str);
+        if let Some(file_name) = parent.file_name()
+            && let file_name = file_name.display().to_string()
+            && let Some((before, after)) = file_name.split_once('*')
+        {
+            parent.pop();
+            let dir = if parent.has_root() {
+                parent.read_dir()
+            } else {
+                current_dir().unwrap_or_default().join(&parent).read_dir()
+            }
+            .unwrap();
+            let before = before.to_string();
+            let after = after.to_string();
+            Glob {
+                parent: Some(parent),
+                dir: Some(dir),
+                before,
+                after,
+            }
+        } else {
+            Glob {
+                parent: Some(parent),
+                dir: None,
+                before: String::new(),
+                after: String::new(),
+            }
+        }
+    }
+}
+
+impl Iterator for Glob {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.dir.is_none() {
+            if let Some(parent) = &self.parent {
+                let res = parent.display().to_string();
+                self.parent = None;
+                Some(res)
+            } else {
+                None
+            }
+        } else {
+            let pattern_len = self.before.len() + self.after.len();
+            let dir = self.dir.as_mut().unwrap();
+            loop {
+                match dir.next() {
+                    None => break None,
+                    Some(entry) => {
+                        if let Ok(entry) = entry {
+                            let file_name = entry.file_name().display().to_string();
+                            if file_name.len() > pattern_len
+                                && file_name.starts_with(&self.before)
+                                && file_name.ends_with(&self.after)
+                            {
+                                if let Some(parent) = &self.parent {
+                                    let mut parent = parent.clone();
+                                    parent.push(entry.file_name());
+                                    break Some(parent.display().to_string());
+                                } else {
+                                    break Some(file_name);
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 impl PartialEq for CliOpt {
     fn eq(&self, other: &Self) -> bool {
         let self_nam = if self.nme.as_bytes()[0] == b'-' {
@@ -110,6 +200,7 @@ impl Ord for CliOpt {
 /// Defines combined storage for CLI argements description and real arguments data
 ///
 #[allow(clippy::upper_case_acronyms)]
+#[derive(Default)]
 pub struct CLI {
     args: Vec<String>,
     opts: Vec<CliOpt>,
@@ -117,6 +208,7 @@ pub struct CLI {
     oper: Option<String>,
     oper_requested: bool,
     oper_descr: Option<String>,
+    glob_mode: WildCardExpansion,
     unprocessed: bool,
     unknown: Vec<String>,
 }
@@ -127,12 +219,8 @@ impl CLI {
         CLI {
             args: vec![],
             opts: vec![],
-            descr: None,
-            oper: Default::default(),
-            oper_requested: false,
-            oper_descr: Default::default(),
             unprocessed: true,
-            unknown: vec![],
+            unknown: vec![],..Default::default()
         }
     }
 
@@ -177,6 +265,12 @@ impl CLI {
     ///
     pub fn use_oper(&mut self) -> &mut Self {
         self.oper_requested = true;
+        self
+    }
+    /// Process wildcard in arguments
+    ///
+    pub fn process_wildcard(&mut self, mode: WildCardExpansion) -> &mut Self {
+        self.glob_mode = mode;
         self
     }
     /// Specify an operation description
@@ -365,7 +459,23 @@ impl CLI {
             } else if self.oper.is_none() && self.oper_requested {
                 self.oper = Some(arg.clone())
             } else {
-                self.args.push(arg)
+                if !cfg!(Windows) {
+                    self.args.push(arg)
+                } else {
+                    match self.glob_mode {
+                        WildCardExpansion::None => self.args.push(arg),
+                        WildCardExpansion::Once => {
+                            match &Glob::from(&arg).next() {
+                            None => self.args.push(arg),
+                            Some(arg) => self.args.push(arg.to_string()),}
+                        }
+                        WildCardExpansion::All => {
+                            for arg in Glob::from(&arg) {
+        self.args.push(arg)
+    }
+                        }
+                    }
+                }
             }
             self.oper_requested = false;
         }
@@ -418,6 +528,13 @@ impl CliNoMut {
     pub fn use_oper(&self) -> &Self {
         let mut cli = self.cli.borrow_mut();
         cli.oper_requested = true;
+        self
+    }
+    /// Process wildcard in arguments
+    ///
+    pub fn process_wildcard(&self, mode: WildCardExpansion) -> &Self {
+    let mut cli = self.cli.borrow_mut();
+        cli.glob_mode = mode;
         self
     }
     /// Specify an operation description
