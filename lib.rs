@@ -1,4 +1,12 @@
-use std::{cell::RefCell, cmp::Ordering, collections::HashSet, env::{self,current_dir}, fmt, path::PathBuf, fs::ReadDir,};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::HashSet,
+    env::{self, current_dir},
+    fmt,
+    fs::ReadDir,
+    path::PathBuf,
+};
 
 #[cfg(unix)]
 const OPT_PREFIX: char = '-';
@@ -37,10 +45,10 @@ pub enum OptTyp {
 /// * All - occurance
 #[derive(PartialEq, Debug, Default)]
 pub enum WildCardExpansion {
-#[default]
+    #[default]
     None,
     Once,
-    All
+    All,
 }
 
 /// Specify possible values of command line options
@@ -118,17 +126,8 @@ impl Iterator for Glob {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.dir.is_none() {
-            if let Some(parent) = &self.parent {
-                let res = parent.display().to_string();
-                self.parent = None;
-                Some(res)
-            } else {
-                None
-            }
-        } else {
+        if let Some(dir) = &mut self.dir {
             let pattern_len = self.before.len() + self.after.len();
-            let dir = self.dir.as_mut().unwrap();
             loop {
                 match dir.next() {
                     None => break None,
@@ -153,6 +152,12 @@ impl Iterator for Glob {
                     }
                 }
             }
+        } else if let Some(parent) = &self.parent {
+            let res = parent.display().to_string();
+            self.parent = None;
+            Some(res)
+        } else {
+            None
         }
     }
 }
@@ -220,7 +225,8 @@ impl CLI {
             args: vec![],
             opts: vec![],
             unprocessed: true,
-            unknown: vec![],..Default::default()
+            unknown: vec![],
+            ..Default::default()
         }
     }
 
@@ -458,21 +464,18 @@ impl CLI {
                 }
             } else if self.oper.is_none() && self.oper_requested {
                 self.oper = Some(arg.clone())
+            } else if !cfg!(Windows) {
+                self.args.push(arg)
             } else {
-                if !cfg!(Windows) {
-                    self.args.push(arg)
-                } else {
-                    match self.glob_mode {
-                        WildCardExpansion::None => self.args.push(arg),
-                        WildCardExpansion::Once => {
-                            match &Glob::from(&arg).next() {
-                            None => self.args.push(arg),
-                            Some(arg) => self.args.push(arg.to_string()),}
-                        }
-                        WildCardExpansion::All => {
-                            for arg in Glob::from(&arg) {
-        self.args.push(arg)
-    }
+                match self.glob_mode {
+                    WildCardExpansion::None => self.args.push(arg),
+                    WildCardExpansion::Once => match &Glob::from(&arg).next() {
+                        None => self.args.push(arg),
+                        Some(arg) => self.args.push(arg.to_string()),
+                    },
+                    WildCardExpansion::All => {
+                        for arg in Glob::from(&arg) {
+                            self.args.push(arg)
                         }
                     }
                 }
@@ -533,7 +536,7 @@ impl CliNoMut {
     /// Process wildcard in arguments
     ///
     pub fn process_wildcard(&self, mode: WildCardExpansion) -> &Self {
-    let mut cli = self.cli.borrow_mut();
+        let mut cli = self.cli.borrow_mut();
         cli.glob_mode = mode;
         self
     }
