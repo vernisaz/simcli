@@ -465,15 +465,15 @@ impl CLI {
                     self.unknown.push(string)
                 }
             } else if self.oper.is_none() && self.oper_requested {
-                self.oper = Some(arg.clone())
+                self.oper = Some(arg)
             } else if !cfg!(windows) {
                 self.args.push(arg)
             } else {
                 match self.glob_mode {
                     WildCardExpansion::None => self.args.push(arg),
-                    WildCardExpansion::Once => match &Glob::from(&arg).next() {
+                    WildCardExpansion::Once => match Glob::from(&arg).next() {
                         None => self.args.push(arg),
-                        Some(arg) => self.args.push(arg.to_string()),
+                        Some(arg) => self.args.push(arg),
                     },
                     WildCardExpansion::All => {
                         for arg in Glob::from(&arg) {
