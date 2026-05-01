@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     collections::HashSet,
     env::{self, current_dir},
+    ffi::{OsStr, OsString},
     fmt,
     fs::ReadDir,
     path::PathBuf,
@@ -83,11 +84,12 @@ pub struct CliOpt {
     descr: Option<String>,
 }
 
+#[derive(Debug, Default)]
 struct Glob {
     parent: Option<PathBuf>,
     dir: Option<ReadDir>,
-    before: String,
-    after: String,
+    before: OsString,
+    after: OsString,
 }
 impl Glob {
     fn from(str: &str) -> Self {
@@ -97,26 +99,21 @@ impl Glob {
             && let Some((before, after)) = file_name.split_once('*')
         {
             parent.pop();
-            let dir = if parent.has_root() {
-                parent.read_dir()
-            } else {
-                current_dir().unwrap_or_default().join(&parent).read_dir()
-            }
-            .ok();
-            let before = before.to_string();
-            let after = after.to_string();
             Glob {
+                dir: if parent.has_root() {
+                    parent.read_dir()
+                } else {
+                    current_dir().unwrap_or_default().join(&parent).read_dir()
+                }
+                .ok(),
                 parent: Some(parent),
-                dir,
-                before,
-                after,
+                before: OsStr::new(before).to_os_string(),
+                after: OsStr::new(after).to_os_string(),
             }
         } else {
             Glob {
                 parent: Some(parent),
-                dir: None,
-                before: String::new(),
-                after: String::new(),
+                ..Default::default()
             }
         }
     }
@@ -133,17 +130,21 @@ impl Iterator for Glob {
                     None => break None,
                     Some(entry) => {
                         if let Ok(entry) = entry {
-                            let file_name = entry.file_name().display().to_string();
+                            let file_name = entry.file_name();
                             if file_name.len() > pattern_len
-                                && file_name.starts_with(&self.before)
-                                && file_name.ends_with(&self.after)
+                                && file_name
+                                    .as_encoded_bytes()
+                                    .starts_with(self.before.as_encoded_bytes())
+                                && file_name
+                                    .as_encoded_bytes()
+                                    .ends_with(self.after.as_encoded_bytes())
                             {
                                 if let Some(parent) = &self.parent {
-                                    let mut parent = parent.clone();
-                                    parent.push(entry.file_name());
-                                    break Some(parent.display().to_string());
+                                    break Some(
+                                        parent.join(entry.file_name()).display().to_string(),
+                                    );
                                 } else {
-                                    break Some(file_name);
+                                    break Some(file_name.display().to_string());
                                 }
                             } else {
                                 continue;
@@ -161,6 +162,7 @@ impl Iterator for Glob {
         }
     }
 }
+
 impl PartialEq for CliOpt {
     fn eq(&self, other: &Self) -> bool {
         let self_nam = if self.nme.as_bytes()[0] == b'-' {
@@ -464,7 +466,7 @@ impl CLI {
                 }
             } else if self.oper.is_none() && self.oper_requested {
                 self.oper = Some(arg.clone())
-            } else if !cfg!(Windows) {
+            } else if !cfg!(windows) {
                 self.args.push(arg)
             } else {
                 match self.glob_mode {
