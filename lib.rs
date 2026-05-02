@@ -204,8 +204,19 @@ impl Ord for CliOpt {
     }
 }
 
-/// Defines combined storage for CLI argements description and real arguments data
+/// Defines a combined storage for CLI argements description and real arguments data
 ///
+/// # Field details
+/// * args - hold a vector of arguments
+/// * opts - hold a vector of options
+/// * descr - description of the CLI
+/// * oper - the operation if any
+/// * oper_requested - tells if the CLI expects an operation
+/// * oper_descr - optional description of the operation
+/// * glob_mode - Windows specific
+/// * unprocessed - state of processing
+/// * unknown - a vector of unrecognized options
+/// all fields managed internally and shouldn't be accesed directly
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Default)]
 pub struct CLI {
@@ -489,6 +500,9 @@ impl CLI {
     }
 }
 
+/// Defines a combined storage for CLI argements description and real arguments
+/// data not requiring to be mutable
+///
 pub struct CliNoMut {
     cli: RefCell<CLI>,
 }
