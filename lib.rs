@@ -131,7 +131,7 @@ impl Iterator for Glob {
                     Some(entry) => {
                         if let Ok(entry) = entry {
                             let file_name = entry.file_name();
-                            if file_name.len() > pattern_len
+                            if file_name.len() >= pattern_len
                                 && file_name
                                     .as_encoded_bytes()
                                     .starts_with(self.before.as_encoded_bytes())
