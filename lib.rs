@@ -297,7 +297,7 @@ impl CLI {
     pub fn oper_description(&mut self, descr: &str) -> Result<&mut Self, OptError> {
         if !self.oper_requested {
             Err(OptError {
-                cause: "an operation description can be defined after a set - use_oper()"
+                cause: "an operation description can be defined after setting - use_oper()"
                     .to_string(),
             })
         } else {
@@ -427,7 +427,7 @@ impl CLI {
                             _ => {
                                 // somehow to report data inconsistency
                                 unreachable!(
-                                    "Can't argument in format -Xname=value become a different type"
+                                    "Can't specify an argument in format -Xname=value become a different type"
                                 )
                                 //opt.v = Some(OptVal::Arr(HashSet::new()))
                             }
