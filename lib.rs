@@ -256,6 +256,9 @@ impl CLI {
                 cause: format!("the option {name} can't be set after parsing arguments"),
             });
         }
+        // opts are case insensitive on Windows
+        #[cfg(target_os = "windows")]
+        let name = name.to_ascii_lowercase();
         for opt in &self.opts {
             if opt.nme == name {
                 return Err(OptError {
@@ -380,7 +383,8 @@ impl CLI {
                 let mut was_input_opt = false;
                 for opt in &mut self.opts {
                     //eprintln!("checking {} ags {string}", opt.nme);
-                    if opt.nme == sarg {
+                    // opts are case insensitive for Windows
+                    if opt.nme == sarg || cfg!(windows) && opt.nme == sarg.to_ascii_lowercase() {
                         match opt.t {
                             OptTyp::Num => {
                                 if let Some(val) = args.next() {
