@@ -13,7 +13,7 @@ some accordingly your needs.
 
 - mixed list of arguments and options
 - use a platform specific option flag, like `-` for Unix and `/` for Windows
-- errors detection as in defining options as in the processing them
+- errors detection as in a defining options as in a processing of them
 - automatic help and description generation
 - specifying a type and range of arguments
  
@@ -84,5 +84,5 @@ can consume more memory.
 
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
-Cargo (.toml descriptor can be easy added, since there are no dependencies).
+Cargo (.toml manifest can be easy added, since there are no dependencies).
 Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when you use *RB*.

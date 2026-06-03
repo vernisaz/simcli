@@ -216,6 +216,7 @@ impl Ord for CliOpt {
 /// * glob_mode - Windows specific
 /// * unprocessed - state of processing
 /// * unknown - a vector of unrecognized options
+///
 /// all fields managed internally and shouldn't be accesed directly
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Default)]
