@@ -21,6 +21,8 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
             .description("Print version")
             .opt("-long", OptTyp::Str)?
             .description("Long definition")
+            .opt("-pat", OptTyp::ArrStr)?
+            .description("Long multiple patters")
             .use_oper()
             .oper_description(
                 r#"Where operations are:
@@ -68,10 +70,13 @@ And options are:"#,
         } else {
             1
         } {
-            println!("Hello {name}!");
+            eprintln!("Hello {name}!");
         }
     } else if cli.get_opt("h").is_some() || cli.get_errors().is_some() {
         eprintln!("{}", cli.get_description().unwrap())
+    }
+    if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pat") {
+        eprintln!("patterns: {patterns:?}")
     }
     Ok(())
 }

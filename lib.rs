@@ -35,6 +35,7 @@ pub enum OptTyp {
     FNum,
     Str,
     InStr,
+    ArrStr,
     #[default]
     None,
 }
@@ -60,6 +61,7 @@ pub enum OptVal {
     FNum(f64),
     Str(String),
     Arr(HashSet<(String, String)>),
+    ArrStr(Vec<String>),
     Empty,
     Unmatch,
 }
@@ -386,30 +388,51 @@ impl CLI {
                     //eprintln!("checking {} ags {string}", opt.nme);
                     // opts are case insensitive for Windows
                     if opt.nme == sarg || cfg!(windows) && opt.nme == sarg.to_ascii_lowercase() {
-                        match opt.t {
-                            OptTyp::Num => {
-                                if let Some(val) = args.next() {
-                                    match val.parse::<i64>() {
-                                        Ok(num) => opt.v = Some(OptVal::Num(num)),
-                                        _ => opt.v = Some(OptVal::Unmatch),
+                        if opt.v.is_none() || opt.t == OptTyp::ArrStr {
+                            match opt.t {
+                                OptTyp::Num => {
+                                    if let Some(val) = args.next() {
+                                        match val.parse::<i64>() {
+                                            Ok(num) => opt.v = Some(OptVal::Num(num)),
+                                            _ => opt.v = Some(OptVal::Unmatch),
+                                        }
                                     }
                                 }
-                            }
-                            OptTyp::None => opt.v = Some(OptVal::Empty),
-                            OptTyp::FNum => {
-                                if let Some(val) = args.next() {
-                                    match val.parse::<f64>() {
-                                        Ok(num) => opt.v = Some(OptVal::FNum(num)),
-                                        _ => opt.v = Some(OptVal::Unmatch),
+                                OptTyp::None => opt.v = Some(OptVal::Empty),
+                                OptTyp::FNum => {
+                                    if let Some(val) = args.next() {
+                                        match val.parse::<f64>() {
+                                            Ok(num) => opt.v = Some(OptVal::FNum(num)),
+                                            _ => opt.v = Some(OptVal::Unmatch),
+                                        }
                                     }
                                 }
-                            }
-                            OptTyp::Str => {
-                                if let Some(str) = args.next() {
-                                    opt.v = Some(OptVal::Str(str))
+                                OptTyp::Str => {
+                                    if let Some(str) = args.next() {
+                                        opt.v = Some(OptVal::Str(str))
+                                    }
                                 }
+                                OptTyp::ArrStr => {
+                                    if let Some(str) = args.next() {
+                                        if opt.v.is_none() {
+                                            opt.v = Some(OptVal::ArrStr(vec![]))
+                                        }
+                                        match &mut opt.v {
+                                            &mut Some(OptVal::ArrStr(ref mut vec)) => {
+                                                vec.push(str);
+                                            }
+                                            _ => {
+                                                // somehow to report data inconsistency
+                                                unreachable!("Can't add an argument to non vec")
+                                                //opt.v = Some(OptVal::Arr(HashSet::new()))
+                                            }
+                                        }
+                                    }
+                                }
+                                OptTyp::InStr => (),
                             }
-                            OptTyp::InStr => (),
+                        } else {
+                            self.unknown.push(string.clone()) // not right because it's a duplicate argument
                         }
                         string.clear();
                     } else if opt.t == OptTyp::InStr && sarg.starts_with(&opt.nme) {
@@ -449,29 +472,50 @@ impl CLI {
                         && opt.nme.chars().next().unwrap() == last
                         && !was_input_opt
                     {
-                        match opt.t {
-                            OptTyp::Num => {
-                                if let Some(val) = args.next() {
-                                    match val.parse::<i64>() {
-                                        Ok(num) => opt.v = Some(OptVal::Num(num)),
-                                        _ => opt.v = Some(OptVal::Unmatch),
+                        if opt.v.is_none() || opt.t == OptTyp::ArrStr {
+                            match opt.t {
+                                OptTyp::Num => {
+                                    if let Some(val) = args.next() {
+                                        match val.parse::<i64>() {
+                                            Ok(num) => opt.v = Some(OptVal::Num(num)),
+                                            _ => opt.v = Some(OptVal::Unmatch),
+                                        }
                                     }
                                 }
-                            }
-                            OptTyp::FNum => {
-                                if let Some(val) = args.next() {
-                                    match val.parse::<f64>() {
-                                        Ok(num) => opt.v = Some(OptVal::FNum(num)),
-                                        _ => opt.v = Some(OptVal::Unmatch),
+                                OptTyp::FNum => {
+                                    if let Some(val) = args.next() {
+                                        match val.parse::<f64>() {
+                                            Ok(num) => opt.v = Some(OptVal::FNum(num)),
+                                            _ => opt.v = Some(OptVal::Unmatch),
+                                        }
                                     }
                                 }
-                            }
-                            OptTyp::Str => {
-                                if let Some(str) = args.next() {
-                                    opt.v = Some(OptVal::Str(str))
+                                OptTyp::Str => {
+                                    if let Some(str) = args.next() {
+                                        opt.v = Some(OptVal::Str(str))
+                                    }
                                 }
+                                OptTyp::ArrStr => {
+                                    if let Some(str) = args.next() {
+                                        if opt.v.is_none() {
+                                            opt.v = Some(OptVal::ArrStr(vec![]))
+                                        }
+                                        match &mut opt.v {
+                                            &mut Some(OptVal::ArrStr(ref mut vec)) => {
+                                                vec.push(str);
+                                            }
+                                            _ => {
+                                                // somehow to report data inconsistency
+                                                unreachable!("Can't add an argument to non vec")
+                                                //opt.v = Some(OptVal::Arr(HashSet::new()))
+                                            }
+                                        }
+                                    }
+                                }
+                                OptTyp::InStr | OptTyp::None => continue, // TODO maybe add some error handling
                             }
-                            OptTyp::InStr | OptTyp::None => continue, // TODO maybe add some error handling
+                        } else {
+                            self.unknown.push(last.to_string()) // not right because it's a duplicate argument
                         }
                         was_input_opt = true;
                         string.retain(|c| c != last);
