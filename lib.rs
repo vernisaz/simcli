@@ -83,6 +83,7 @@ pub struct CliOpt {
     t: OptTyp,
     v: Option<OptVal>,
     nme: String,
+    other: Option<HashSet<String>>,
     descr: Option<String>,
 }
 
@@ -206,6 +207,11 @@ impl Ord for CliOpt {
     }
 }
 
+enum OptStat {
+    Duplicate,
+    DupAlias,
+    NoOption,
+}
 /// Defines a combined storage for CLI argements description and real arguments data
 ///
 /// # Field details
@@ -262,16 +268,15 @@ impl CLI {
         // opts are case insensitive on Windows
         #[cfg(target_os = "windows")]
         let name = name.to_ascii_lowercase();
-        for opt in &self.opts {
-            if opt.nme == name {
-                return Err(OptError {
-                    cause: format!("repeating option {name}"),
-                });
-            }
+        if self.get_opt_def(name).is_ok() {
+            return Err(OptError {
+                cause: format!("repeating option {name}"),
+            });
         }
         self.opts.push(CliOpt {
             t,
             nme: name.to_string(),
+            other: None,
             descr: None,
             v: None,
         });
@@ -285,6 +290,30 @@ impl CLI {
             _ => self.descr = Some(descr.to_string()),
         }
         self
+    }
+
+    pub fn alias(&mut self, name: &str) -> Result<&mut Self, OptError> {
+        if !self.unprocessed {
+            return Err(OptError {
+                cause: format!("the alias {name} can't be set after parsing arguments"),
+            });
+        }
+        match self.opts.last_mut() {
+            Some(element) => {
+                if element.other.is_none() {
+                    element.other = Some(HashSet::new())
+                }
+                if let Some(ref mut aliases) = element.other {
+                    aliases.insert(name.to_string());
+                }
+            }
+            _ => {
+                return Err(OptError {
+                    cause: "no current element to set alias to".to_string(),
+                });
+            }
+        }
+        Ok(self)
     }
     /// Use an operation as the first argument
     ///
@@ -324,7 +353,12 @@ impl CLI {
         for opt in &self.opts {
             descr += &format!("\n{OPT_PREFIX}{}", opt.nme);
             if let Some(some_descr) = &opt.descr {
-                descr += &format!("\t{some_descr}")
+                descr += &format!("\t{some_descr}");
+                if let Some(aliases) = &opt.other {
+                    for alias in aliases {
+                        descr += &format!("\n{OPT_PREFIX}{alias}\t''");
+                    }
+                }
             }
         }
         if descr.is_empty() { None } else { Some(descr) }
@@ -335,12 +369,7 @@ impl CLI {
         if self.unprocessed {
             self.parse()
         }
-        for opt in &self.opts {
-            if opt.nme == name {
-                return opt.v.as_ref();
-            }
-        }
-        None
+        self.get_opt_def(name).ok()
     }
     /// Returns first argument as an operation
     ///
@@ -377,6 +406,45 @@ impl CLI {
         }
     }
 
+    /// Used internally to check if the option is defined
+    fn get_opt_def(&self, name: &str) -> Result<&OptVal, OptStat> {
+        let mut found = None;
+        for opt in &self.opts {
+            if opt.nme == name {
+                if found.is_none() {
+                    found = opt.v.as_ref();
+                } else {
+                    return Err(OptStat::Duplicate);
+                }
+            } else if let Some(other) = &opt.other
+                && other.contains(name)
+            {
+                if found.is_none() {
+                    found = opt.v.as_ref();
+                } else {
+                    return Err(OptStat::DupAlias);
+                }
+            }
+        }
+        match found {
+            None => Err(OptStat::NoOption),
+            Some(opt) => Ok(opt),
+        }
+    }
+
+    fn matches(opt: &CliOpt, name: &str) -> bool {
+        if opt.nme == name || cfg!(windows) && opt.nme == name.to_ascii_lowercase() {
+            return true;
+        }
+        if let Some(other) = &opt.other
+            && (other.contains(name) || cfg!(windows) && other.contains(&name.to_ascii_lowercase()))
+        {
+            true
+        } else {
+            false
+        }
+    }
+
     fn parse(&mut self) {
         let mut args = env::args();
         args.next(); // swallow first
@@ -387,7 +455,7 @@ impl CLI {
                 for opt in &mut self.opts {
                     //eprintln!("checking {} ags {string}", opt.nme);
                     // opts are case insensitive for Windows
-                    if opt.nme == sarg || cfg!(windows) && opt.nme == sarg.to_ascii_lowercase() {
+                    if CLI::matches(opt, sarg) {
                         if opt.v.is_none() || opt.t == OptTyp::ArrStr {
                             match opt.t {
                                 OptTyp::Num => {
@@ -580,6 +648,20 @@ impl CliNoMut {
     pub fn opt(&self, name: &str, t: OptTyp) -> Result<&Self, OptError> {
         let mut cli = self.cli.borrow_mut();
         match cli.opt(name, t) {
+            Ok(_) => Ok(self),
+            Err(err) => Err(err),
+        }
+    }
+    /// Creates an alias for the last created option
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let _ = cli.alias("-color").inspect_err(|e| eprintln!("{e}"));
+    /// ```
+    pub fn alias(&self, name: &str) -> Result<&Self, OptError> {
+        let mut cli = self.cli.borrow_mut();
+        match cli.alias(name) {
             Ok(_) => Ok(self),
             Err(err) => Err(err),
         }
