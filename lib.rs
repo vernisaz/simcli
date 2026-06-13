@@ -449,6 +449,10 @@ impl CLI {
         let mut args = env::args();
         args.next(); // swallow first
         while let Some(arg) = args.next() {
+            if arg == "--" {
+                self.args.extend(args);
+                break;
+            }
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 let mut string = sarg.to_string();
                 let mut was_input_opt = false;
