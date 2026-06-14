@@ -287,7 +287,7 @@ impl CLI {
         // opts are case insensitive on Windows
         #[cfg(target_os = "windows")]
         let name = name.to_ascii_lowercase();
-        if self.get_opt_def(name).is_ok() {
+        if self.get_opt_def(&name).is_ok() {
             return Err(OptError {
                 cause: format!("repeating option {name}"),
             });
