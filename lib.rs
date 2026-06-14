@@ -225,7 +225,7 @@ enum OptStat {
 /// * unprocessed - state of processing
 /// * unknown - a vector of unrecognized options
 ///
-/// all fields managed internally and shouldn't be accesed directly
+/// all fields are managed internally and shouldn't be accesed directly
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Default)]
 pub struct CLI {
@@ -237,17 +237,36 @@ pub struct CLI {
     oper_descr: Option<String>,
     glob_mode: WildCardExpansion,
     unprocessed: bool,
-    unknown: Vec<String>,
+    unknown: Vec<String>, // and add misused
+    src_args: Vec<String>,
 }
 impl CLI {
     /// Create an empty CLI arguments descriptor
     ///
     pub fn new() -> Self {
+    let mut src_args = vec![];
+    let mut args = env::args();
+        args.next(); // swallow first
+        src_args.extend(args);
         CLI {
             args: vec![],
             opts: vec![],
             unprocessed: true,
             unknown: vec![],
+            src_args,
+            ..Default::default()
+        }
+    }
+    
+    /// Create an empty CLI arguments descriptor from a vector of arguments
+    ///
+    pub fn from(src_args: Vec<String>) -> Self {
+        CLI {
+            args: vec![],
+            opts: vec![],
+            unprocessed: true,
+            unknown: vec![],
+            src_args,
             ..Default::default()
         }
     }
@@ -446,8 +465,7 @@ impl CLI {
     }
 
     fn parse(&mut self) {
-        let mut args = env::args();
-        args.next(); // swallow first
+        let mut args = self.src_args.clone().into_iter();
         while let Some(arg) = args.next() {
             if arg == "--" {
                 self.args.extend(args);
