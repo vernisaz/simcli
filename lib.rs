@@ -310,7 +310,16 @@ impl CLI {
         }
         self
     }
-
+    /// Add an alias to just created an argument option
+    ///
+    /// Several aliases can be added, aliases are usually created as a muli symbols alternatives
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cli = cli.opt("v", OptTyp::None).inspect_err(|e| eprintln!("{e}"));
+    /// cli.alias("-version").description("Provides a version of the product");
+    /// ```
     pub fn alias(&mut self, name: &str) -> Result<&mut Self, OptError> {
         if !self.unprocessed {
             return Err(OptError {
