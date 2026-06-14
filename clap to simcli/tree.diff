@@ -1,0 +1,872 @@
+[1mdiff --git a/src/lib.rs b/src/lib.rs[m
+[1mindex 5f1779f..72699f9 100644[m
+[1m--- a/src/lib.rs[m
+[1m+++ b/src/lib.rs[m
+[36m@@ -1 +1,41 @@[m
+ pub mod rust_tree;[m
+[32m+[m[32mpub trait IsExecutable {[m
+[32m+[m[32m    /// Returns `true` if there is a file at the given path and it is[m
+[32m+[m[32m    /// executable. Returns `false` otherwise.[m
+[32m+[m[32m    ///[m
+[32m+[m[32m    /// See the module documentation for details.[m
+[32m+[m[32m    fn is_executable(&self) -> bool;[m
+[32m+[m[32m}[m
+[32m+[m[32m#[cfg(unix)][m
+[32m+[m[32mmod unix {[m
+[32m+[m[32m    use std::os::unix::fs::PermissionsExt;[m
+[32m+[m[32m    use std::path::Path;[m
+[32m+[m
+[32m+[m[32m    use super::IsExecutable;[m
+[32m+[m
+[32m+[m[32m    impl IsExecutable for Path {[m
+[32m+[m[32m        fn is_executable(&self) -> bool {[m
+[32m+[m[32m            let metadata = match self.metadata() {[m
+[32m+[m[32m                Ok(metadata) => metadata,[m
+[32m+[m[32m                Err(_) => return false,[m
+[32m+[m[32m            };[m
+[32m+[m[32m            let permissions = metadata.permissions();[m
+[32m+[m[32m            metadata.is_dir() || metadata.is_file() && permissions.mode() & 0o111 != 0[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#[cfg(target_os = "windows")][m
+[32m+[m[32mmod windows {[m
+[32m+[m[32m    use std::path::Path;[m
+[32m+[m
+[32m+[m[32m    use super::IsExecutable;[m
+[32m+[m[32m    impl IsExecutable for Path {[m
+[32m+[m[32m        fn is_executable(&self) -> bool {[m
+[32m+[m[32m            let Ok(metadata) = self.metadata() else {[m
+[32m+[m[32m                return false;[m
+[32m+[m[32m            };[m
+[32m+[m[32m            metadata.is_dir() || self.extension().is_some_and(|s| s == "exe" || s == "bat")[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main.rs b/src/main.rs[m
+[1mindex 181a15a..8754e43 100644[m
+[1m--- a/src/main.rs[m
+[1m+++ b/src/main.rs[m
+[36m@@ -1,5 +1,5 @@[m
+[31m-use rust_tree::rust_tree::cli::run_cli;[m
+[31m-use rust_tree::rust_tree::utils::is_broken_pipe_error;[m
+[32m+[m[32muse simtree::rust_tree::cli::run_cli;[m
+[32m+[m[32muse simtree::rust_tree::utils::is_broken_pipe_error;[m
+ [m
+ fn main() {[m
+     match run_cli() {[m
+[1mdiff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs[m
+[1mindex 24e1993..b01070e 100644[m
+[1m--- a/src/rust_tree/cli.rs[m
+[1m+++ b/src/rust_tree/cli.rs[m
+[36m@@ -1,258 +1,184 @@[m
+ // CLI module - handles cli flag parsing[m
+ [m
+[31m-use clap::Parser;[m
+[31m-use glob::Pattern;[m
+ use std::io;[m
+[31m-[m
+[32m+[m[32muse std::error::Error;[m
+[32m+[m[32muse crate::rust_tree::Pattern;[m
+ use crate::rust_tree::options::TreeOptions;[m
+ use crate::rust_tree::traversal::list_directory;[m
+[32m+[m[32muse simcli::{CLI, OptTyp, OptVal};[m
+[32m+[m[32muse simcolor::Colorized;[m
+ [m
+ // Custom function to validate the glob pattern[m
+ pub fn parse_glob_pattern(s: &str) -> Result<Pattern, String> {[m
+[31m-    Pattern::new(s).map_err(|e| e.to_string())[m
+[32m+[m[32mOk(Pattern::new(s))[m
+ }[m
+ [m
+[31m-#[derive(Parser, Debug)][m
+[31m-#[command([m
+[31m-    author,[m
+[31m-    version,[m
+[31m-    about,[m
+[31m-    long_about = None,[m
+[31m-    help_template = "\[m
+[31m-{name} {version}[m
+[31m-[m
+[31m-{about}[m
+[31m-Source: https://github.com/peteretelej/tree[m
+[31m-[m
+[31m-{usage-heading} {usage}[m
+[31m-[m
+[31m-{all-args}"[m
+[31m-)][m
+[31m-pub struct Cli {[m
+[31m-    #[arg(default_value = ".", help = "The path to the directory to list.")][m
+[31m-    pub path: String,[m
+[31m-[m
+[31m-    #[arg(short = 'a', long = "all", help = "Include hidden files.")][m
+[31m-    pub all_files: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'L',[m
+[31m-        long = "level",[m
+[31m-        help = "Descend only level directories deep."[m
+[31m-    )][m
+[31m-    pub level: Option<u32>,[m
+[31m-[m
+[31m-    #[arg(short = 'd', long = "directories", help = "List directories only.")][m
+[31m-    pub dir_only: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'i',[m
+[31m-        long = "no-indent",[m
+[31m-        help = "Turn off file/directory indentation."[m
+[31m-    )][m
+[31m-    pub no_indent: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 's',[m
+[31m-        long = "size",[m
+[31m-        help = "Print the size of each file in bytes."[m
+[31m-    )][m
+[31m-    pub print_size: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'H',[m
+[31m-        long = "human-readable",[m
+[31m-        help = "Print the size in a more human-readable format."[m
+[31m-    )][m
+[31m-    pub human_readable: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'P',[m
+[31m-        long = "pattern",[m
+[31m-        help = "List only those files that match the wild-card pattern."[m
+[31m-    )][m
+[31m-    pub pattern: Vec<String>,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'I',[m
+[31m-        long = "exclude",[m
+[31m-        help = "Do not list files that match the wild-card pattern. May be repeated."[m
+[31m-    )][m
+[31m-    pub exclude: Vec<String>,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'f',[m
+[31m-        long = "full-path",[m
+[31m-        help = "Prints the full path prefix for each file."[m
+[31m-    )][m
+[31m-    pub full_path: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'C',[m
+[31m-        long = "color",[m
+[31m-        help = "Turn colorization on always, using built-in color defaults if the LS_COLORS environment variable is not set. Helpful when piping output to other programs."[m
+[31m-    )][m
+[31m-    pub color: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'n',[m
+[31m-        long = "no-color",[m
+[31m-        help = "Turn colorization off always (--no-color overrides --color)."[m
+[31m-    )][m
+[31m-    pub no_color: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'A',[m
+[31m-        long = "ascii",[m
+[31m-        help = "Turn on ANSI line graphics hack when printing the indentation lines."[m
+[31m-    )][m
+[31m-    pub ascii: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 't',[m
+[31m-        long = "sort-by-time",[m
+[31m-        help = "Sort output by last modification time instead of alphabetically."[m
+[31m-    )][m
+[31m-    pub sort_by_time: bool,[m
+[31m-[m
+[31m-    #[arg(short = 'r', long = "reverse", help = "Reverse the sort order.")][m
+[31m-    pub reverse: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'D',[m
+[31m-        long = "mod-date",[m
+[31m-        help = "Print the date of last modification."[m
+[31m-    )][m
+[31m-    pub print_mod_date: bool,[m
+[31m-[m
+[31m-    #[arg(short = 'o', long = "output", help = "Send output to filename.")][m
+[31m-    pub output_file: Option<String>,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "filelimit",[m
+[31m-        value_name = "#",[m
+[31m-        help = "Do not descend directories that contain more than # entries."[m
+[31m-    )][m
+[31m-    pub file_limit: Option<u64>,[m
+[31m-[m
+[31m-    #[arg(long = "dirsfirst", help = "List directories before files.")][m
+[31m-    pub dirs_first: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        short = 'F',[m
+[31m-        long = "classify",[m
+[31m-        help = "Append indicator (one of */=@|%>) to entries."[m
+[31m-    )][m
+[31m-    pub classify: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "noreport",[m
+[31m-        help = "Omits printing of the file and directory report at the end of the tree listing."[m
+[31m-    )][m
+[31m-    pub no_report: bool,[m
+[31m-[m
+[31m-    #[arg(short = 'p', help = "Print the protections for each file (unix only).")][m
+[31m-    pub print_permissions: bool,[m
+[31m-[m
+[31m-    #[arg(long = "fromfile", help = "Read listing from file/stdin")][m
+[31m-    pub fromfile: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "icons",[m
+[31m-        help = "Show icons for files and directories based on their type and extension."[m
+[31m-    )][m
+[31m-    pub icons: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "prune",[m
+[31m-        help = "Prune directories with no matching files when using -P or -I. Has increased memory usage."[m
+[31m-    )][m
+[31m-    pub prune: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "matchdirs",[m
+[31m-        help = "Include directory names in -P pattern matching. Matched directories show all contents."[m
+[31m-    )][m
+[31m-    pub match_dirs: bool,[m
+[31m-[m
+[31m-    #[arg([m
+[31m-        long = "gitignore",[m
+[31m-        help = "Exclude entries matching .gitignore rules."[m
+[31m-    )][m
+[31m-    pub gitignore: bool,[m
+[32m+[m[32mfn define_cli(mut cli: CLI) -> Result<CLI, Box<dyn Error>> {[m
+[32m+[m[32m    //let mut cli = CLI::new();[m
+[32m+[m[32m    cli.description("Where opts are:")[m
+[32m+[m[32m        .opt("a", OptTyp::None)?[m
+[32m+[m[32m        .alias("-all")?[m
+[32m+[m[32m        .description("Include hidden files.")[m
+[32m+[m[32m        .opt("L", OptTyp::Num)?[m
+[32m+[m[32m        .alias("-level")?[m
+[32m+[m[32m        .description("Descend only level directories deep.")[m
+[32m+[m[32m        .opt("d", OptTyp::None)?[m
+[32m+[m[32m        .alias("-directories")?[m
+[32m+[m[32m        .description("List directories only.")[m
+[32m+[m[32m        .opt("i", OptTyp::None)?[m
+[32m+[m[32m        .alias("-no-indent")?[m
+[32m+[m[32m        .description("Turn off file/directory indentation.")[m
+[32m+[m[32m        .opt("s", OptTyp::None)?[m
+[32m+[m[32m        .alias("-size")?[m
+[32m+[m[32m        .description("Print the size of each file in bytes.")[m
+[32m+[m[32m        .opt("H", OptTyp::None)?[m
+[32m+[m[32m        .alias("-human-readable")?[m
+[32m+[m[32m        .description("Print the size in a more human-readable format.")[m
+[32m+[m[32m        .opt("P", OptTyp::ArrStr)?[m
+[32m+[m[32m        .alias("-pattern")?[m
+[32m+[m[32m        .description("List only those files that match the wild-card pattern.")[m
+[32m+[m[32m        .opt("I", OptTyp::ArrStr)?[m
+[32m+[m[32m        .alias("-exclude")?[m
+[32m+[m[32m        .description("Do not list files that match the wild-card pattern. May be repeated.")[m
+[32m+[m[32m        .opt("f", OptTyp::None)?[m
+[32m+[m[32m        .alias("-full-path")?[m
+[32m+[m[32m        .description("Prints the full path prefix for each file.")[m
+[32m+[m[32m        .opt("C", OptTyp::None)?[m
+[32m+[m[32m        .alias("-color")?[m
+[32m+[m[32m        .description("Turn colorization on always, using built-in color defaults if the LS_COLORS environment variable is not set. Helpful when piping output to other programs.")[m
+[32m+[m[32m        .opt("n", OptTyp::None)?[m
+[32m+[m[32m        .alias("-no-color")?[m
+[32m+[m[32m        .description("Turn colorization off always (--no-color overrides --color).")[m
+[32m+[m[41m        [m
+[32m+[m[32m        .opt("A", OptTyp::None)?[m
+[32m+[m[32m        .alias("-ansi")?[m
+[32m+[m[32m        .description("Turn on ANSI line graphics hack when printing the indentation lines.")[m
+[32m+[m[32m        .opt("t", OptTyp::None)?[m
+[32m+[m[32m        .alias("-sort-by-time")?[m
+[32m+[m[32m        .description("Sort output by last modification time instead of alphabetically.")[m
+[32m+[m[32m        .opt("r", OptTyp::None)?[m
+[32m+[m[32m        .alias("-reverse")?[m
+[32m+[m[32m        .description("Reverse the sort order.")[m
+[32m+[m[32m        .opt("D", OptTyp::None)?[m
+[32m+[m[32m        .alias("-mod-date")?[m
+[32m+[m[32m        .description("Print the date of last modification.")[m
+[32m+[m[32m        .opt("o", OptTyp::Str)?[m
+[32m+[m[32m        .alias("-output")?[m
+[32m+[m[32m        .description("Send output to filename.")[m
+[32m+[m[32m        .opt("#", OptTyp::Num)?[m
+[32m+[m[32m        .alias("-filelimit")?[m
+[32m+[m[32m        .description("Do not descend directories that contain more than # entries.")[m
+[32m+[m[32m        .opt("-dirsfirst", OptTyp::None)?[m
+[32m+[m[32m        .description("List directories before files.")[m
+[32m+[m[41m        [m
+[32m+[m[32m        .opt("F", OptTyp::None)?[m
+[32m+[m[32m        .alias("-classify")?[m
+[32m+[m[32m        .description("Append indicator (one of */=@|%>) to entries.")[m
+[32m+[m[32m        .opt("-noreport", OptTyp::None)?[m
+[32m+[m[32m        .description("Omits printing of the file and directory report at the end of the tree listing.")[m
+[32m+[m[32m        .opt("p", OptTyp::None)?[m
+[32m+[m[32m        .description("Print the protections for each file (unix only).")[m
+[32m+[m[32m        .opt("-fromfile", OptTyp::None)?[m
+[32m+[m[32m        .description("Read listing from file/stdin")[m
+[32m+[m[41m        [m
+[32m+[m[32m        .opt("-icons", OptTyp::None)?[m
+[32m+[m[32m        .description("Show icons for files and directories based on their type and extension.")[m
+[32m+[m[32m        .opt("-prune", OptTyp::None)?[m
+[32m+[m[32m        .description("Prune directories with no matching files when using -P or -I. Has increased memory usage.")[m
+[32m+[m[32m        .opt("-matchdirs", OptTyp::None)?[m
+[32m+[m[32m        .description("Include directory names in -P pattern matching. Matched directories show all contents.")[m
+[32m+[m[32m        .opt("-gitignore", OptTyp::None)?[m
+[32m+[m[32m        .description("Exclude entries matching .gitignore rules.")[m
+[32m+[m[32m        .opt("h", OptTyp::None)?[m
+[32m+[m[32m        .alias("-help")?[m
+[32m+[m[32m        .description("Help for the utility.");[m
+[32m+[m[32m        Ok(cli)[m
+ }[m
+ [m
+ /// Convert CLI arguments to TreeOptions[m
+[31m-pub fn cli_to_options(cli: &Cli) -> Result<TreeOptions, String> {[m
+[32m+[m[32mpub fn cli_to_options(cli: &mut CLI) -> Result<TreeOptions, String> {[m
+     // split each `-P` / -I` argument on '|' and parse each fragment individually.[m
+[31m-    let pattern_glob: Vec<Pattern> = cli[m
+[31m-        .pattern[m
+[32m+[m[41m    [m
+[32m+[m[32m    let pattern_glob: Vec<Pattern> =[m[41m [m
+[32m+[m[32m    if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("P") {[m
+[32m+[m[32m        patterns[m
+         .iter()[m
+         .flat_map(|s| s.split('|'))[m
+         .map(|s| s.trim())[m
+         .filter(|s| !s.is_empty())[m
+         .map(parse_glob_pattern)[m
+[31m-        .collect::<Result<Vec<_>, _>>()?;[m
+[32m+[m[32m        .collect::<Result<Vec<_>, _>>()?} else {vec![]};[m
+ [m
+[31m-    let exclude_patterns: Vec<Pattern> = cli[m
+[31m-        .exclude[m
+[32m+[m[32m    let exclude_patterns: Vec<Pattern> = if let Some(OptVal::ArrStr(exclude)) = cli.get_opt("I") {[m
+[32m+[m[32m        exclude[m
+         .iter()[m
+         .flat_map(|s| s.split('|'))[m
+         .map(|s| s.trim())[m
+         .filter(|s| !s.is_empty())[m
+         .map(parse_glob_pattern)[m
+[31m-        .collect::<Result<Vec<_>, _>>()?;[m
+[32m+[m[32m        .collect::<Result<Vec<_>, _>>()?} else {vec![]};[m
+ [m
+     Ok(TreeOptions {[m
+[31m-        all_files: cli.all_files,[m
+[31m-        level: cli.level,[m
+[31m-        full_path: cli.full_path,[m
+[31m-        dir_only: cli.dir_only,[m
+[31m-        no_indent: cli.no_indent,[m
+[31m-        print_size: cli.print_size,[m
+[31m-        human_readable: cli.human_readable,[m
+[32m+[m[32m        all_files: cli.get_opt("a") == Some(&OptVal::Empty), //all_files,[m
+[32m+[m[32m        level: if let Some(OptVal::Num(level)) = cli.get_opt("L") {Some(*level as u32)} else {None}, //cli.level,[m
+[32m+[m[32m        full_path: cli.get_opt("f") == Some(&OptVal::Empty), // cli.full_path,[m
+[32m+[m[32m        dir_only: cli.get_opt("d") == Some(&OptVal::Empty), // cli.dir_only,[m
+[32m+[m[32m        no_indent: cli.get_opt("i") == Some(&OptVal::Empty), // cli.no_indent,[m
+[32m+[m[32m        print_size: cli.get_opt("s") == Some(&OptVal::Empty), // cli.print_size,[m
+[32m+[m[32m        human_readable: cli.get_opt("H") == Some(&OptVal::Empty), // cli.human_readable,[m
+         pattern_glob,[m
+[31m-        match_dirs: cli.match_dirs,[m
+[32m+[m[32m        match_dirs: cli.get_opt("matchdirs") == Some(&OptVal::Empty), // cli.match_dirs,[m
+         exclude_patterns,[m
+[31m-        color: cli.color,[m
+[31m-        no_color: cli.no_color,[m
+[31m-        ascii: cli.ascii,[m
+[31m-        sort_by_time: cli.sort_by_time,[m
+[31m-        reverse: cli.reverse,[m
+[31m-        print_mod_date: cli.print_mod_date,[m
+[31m-        output_file: cli.output_file.clone(),[m
+[31m-        file_limit: cli.file_limit,[m
+[31m-        dirs_first: cli.dirs_first,[m
+[31m-        classify: cli.classify,[m
+[31m-        no_report: cli.no_report,[m
+[31m-        print_permissions: cli.print_permissions,[m
+[31m-        from_file: cli.fromfile,[m
+[31m-        icons: cli.icons,[m
+[31m-        prune: cli.prune,[m
+[31m-        gitignore: cli.gitignore,[m
+[32m+[m[32m        color: cli.get_opt("C") == Some(&OptVal::Empty), // cli.color,[m
+[32m+[m[32m        no_color: cli.get_opt("n") == Some(&OptVal::Empty), // cli.no_color,[m
+[32m+[m[32m        ascii: cli.get_opt("A") == Some(&OptVal::Empty), // cli.ascii,[m
+[32m+[m[32m        sort_by_time: cli.get_opt("t") == Some(&OptVal::Empty), // cli.sort_by_time,[m
+[32m+[m[32m        reverse: cli.get_opt("r") == Some(&OptVal::Empty), // cli.reverse,[m
+[32m+[m[32m        print_mod_date: cli.get_opt("D") == Some(&OptVal::Empty), // cli.print_mod_date,[m
+[32m+[m[32m        output_file: if let Some(OptVal::Str(path)) = cli.get_opt("o") {Some(path.to_string())} else {None}, // cli.output_file.clone(),[m
+[32m+[m[32m        file_limit: if let Some(OptVal::Num(limit)) = cli.get_opt("#") {Some(*limit as u64)} else {None}, // cli.file_limit,[m
+[32m+[m[32m        dirs_first: cli.get_opt("-dirsfirst") == Some(&OptVal::Empty), // cli.dirs_first,[m
+[32m+[m[32m        classify: cli.get_opt("F") == Some(&OptVal::Empty), // cli.classify,[m
+[32m+[m[32m        no_report: cli.get_opt("-noreport") == Some(&OptVal::Empty), // cli.no_report,[m
+[32m+[m[32m        print_permissions: cli.get_opt("p") == Some(&OptVal::Empty), // cli.print_permissions,[m
+[32m+[m[32m        from_file: cli.get_opt("-fromfile") == Some(&OptVal::Empty), // cli.fromfile,[m
+[32m+[m[32m        icons: cli.get_opt("-icons") == Some(&OptVal::Empty), // cli.icons,[m
+[32m+[m[32m        prune: cli.get_opt("-prune") == Some(&OptVal::Empty), // cli.prune,[m
+[32m+[m[32m        gitignore: cli.get_opt("-gitignore") == Some(&OptVal::Empty), // cli.gitignore,[m
+     })[m
+ }[m
+ [m
+ /// Main CLI execution function[m
+ pub fn run_cli() -> io::Result<()> {[m
+[31m-    let cli = Cli::parse();[m
+[31m-    let options = cli_to_options(&cli).map_err(|e| {[m
+[32m+[m[32m    let mut cli = define_cli(CLI::new()).map_err(|_| {[m
+[32m+[m[32m        io::Error::new(io::ErrorKind::InvalidInput, "Invalid CLI definition".to_string())[m
+[32m+[m[32m    })?;[m
+[32m+[m[32m    let options = cli_to_options(&mut cli).map_err(|e| {[m
+         io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid pattern: {e}"))[m
+     })?;[m
+[31m-[m
+[31m-    list_directory(&cli.path, &options)[m
+[32m+[m[32m    if cli.get_opt("h").is_some() {[m
+[32m+[m[32m        println!([m
+[32m+[m[32m            "Usage: simtree [options...] [<dir>]\n{}",[m
+[32m+[m[32m            cli.get_description()[m
+[32m+[m[32m                .ok_or(io::Error::other("no help specified"))?[m
+[32m+[m[32m                .bright()[m
+[32m+[m[32m                .blue()[m
+[32m+[m[32m        );[m
+[32m+[m[32m        return Ok(());[m
+[32m+[m[32m    }[m
+[32m+[m[32m    list_directory(if !cli.args().is_empty() {&cli.args()[0]} else {"."}, &options)[m
+ }[m
+ [m
+ /// Execute with provided arguments (useful for testing)[m
+ pub fn run_with_args(args: Vec<String>) -> io::Result<()> {[m
+[31m-    let cli = Cli::try_parse_from(args)[m
+[32m+[m[32m    let mut cli = define_cli(CLI::from(args))[m
+         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;[m
+ [m
+[31m-    let options = cli_to_options(&cli).map_err(|e| {[m
+[32m+[m[32m    let options = cli_to_options(&mut cli).map_err(|e| {[m
+         io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid pattern: {e}"))[m
+     })?;[m
+ [m
+[31m-    list_directory(&cli.path, &options)[m
+[32m+[m[32m    list_directory(if !cli.args().is_empty() {&cli.args()[0]} else {"."}, &options)[m
+ }[m
+ [m
+ #[cfg(test)][m
+[1mdiff --git a/src/rust_tree/display.rs b/src/rust_tree/display.rs[m
+[1mindex f82f0ce..cb8e3bb 100644[m
+[1m--- a/src/rust_tree/display.rs[m
+[1m+++ b/src/rust_tree/display.rs[m
+[36m@@ -1,5 +1,5 @@[m
+[31m-use ansi_term::Colour::{Blue, Cyan, Green, Red, Yellow};[m
+[31m-use is_executable::IsExecutable;[m
+[32m+[m[32muse crate::IsExecutable;[m
+[32m+[m[32muse simcolor::Colorized;[m
+ use std::fs;[m
+ [m
+ // Colorize the tree output based on the file type and extension.[m
+[36m@@ -13,18 +13,18 @@[m [mpub fn colorize(entry: &fs::DirEntry, text: &str) -> String {[m
+     let is_exec = entry.path().is_executable();[m
+ [m
+     if file_type.is_dir() {[m
+[31m-        Blue.bold().paint(text).to_string()[m
+[32m+[m[32m        format!("{}", text.bold().blue())[m
+     } else if file_type.is_symlink() {[m
+[31m-        Cyan.paint(text).to_string()[m
+[32m+[m[32m        format!("{}", text.cyan())[m
+     } else if is_exec {[m
+[31m-        Green.paint(text).to_string()[m
+[32m+[m[32m        format!("{}", text.green())[m
+     } else if let Some(extension) = entry.path().extension().and_then(|ext| ext.to_str()) {[m
+         // Convert extension to lowercase once[m
+         match extension.to_lowercase().as_str() {[m
+             // Archives[m
+[31m-            "tar" | "gz" | "xz" | "bz2" | "zip" | "7z" => Red.paint(text).to_string(),[m
+[32m+[m[32m            "tar" | "gz" | "xz" | "bz2" | "zip" | "7z" => format!("{}", text.red()),[m
+             // Images[m
+[31m-            "jpg" | "jpeg" | "bmp" | "gif" | "png" => Yellow.paint(text).to_string(),[m
+[32m+[m[32m            "jpg" | "jpeg" | "bmp" | "gif" | "png" => format!("{}", text.yellow()),[m
+             // Default: no color for other extensions[m
+             _ => text.to_string(),[m
+         }[m
+[1mdiff --git a/src/rust_tree/gitignore.rs b/src/rust_tree/gitignore.rs[m
+[1mindex 12a7d14..bd026b4 100644[m
+[1m--- a/src/rust_tree/gitignore.rs[m
+[1m+++ b/src/rust_tree/gitignore.rs[m
+[36m@@ -1,4 +1,5 @@[m
+[31m-use glob::{MatchOptions, Pattern};[m
+[32m+[m[32muse crate::rust_tree::MatchOptions;[m
+[32m+[m[32muse crate::rust_tree::Pattern;[m
+ use std::fs;[m
+ use std::path::{Path, PathBuf};[m
+ [m
+[36m@@ -50,7 +51,7 @@[m [mfn parse_line(line: &str, source_dir: &Path) -> Option<GitignoreRule> {[m
+         s = format!("**/{s}");[m
+     }[m
+ [m
+[31m-    let pattern = Pattern::new(&s).ok()?;[m
+[32m+[m[32m    let pattern = Pattern::new(&s);[m
+ [m
+     Some(GitignoreRule {[m
+         pattern,[m
+[36m@@ -121,7 +122,7 @@[m [mimpl GitignoreRules {[m
+             } else {[m
+                 rel_path[m
+             };[m
+[31m-            if rule.pattern.matches_path_with(match_path, MATCH_OPTIONS) {[m
+[32m+[m[32m            if rule.pattern.matches_path_with(match_path, &MATCH_OPTIONS) {[m
+                 ignored = !rule.negated;[m
+             }[m
+         }[m
+[36m@@ -139,22 +140,30 @@[m [mmod tests {[m
+ [m
+     #[test][m
+     fn glob_star_star_matches_zero_segments() {[m
+[31m-        assert!(Pattern::new("**/*.log")[m
+[31m-            .unwrap()[m
+[31m-            .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS));[m
+[31m-        assert!(Pattern::new("**/build")[m
+[31m-            .unwrap()[m
+[31m-            .matches_path_with(Path::new("build"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            Pattern::new("**/*.log")[m
+[32m+[m[32m                .unwrap()[m
+[32m+[m[32m                .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            Pattern::new("**/build")[m
+[32m+[m[32m                .unwrap()[m
+[32m+[m[32m                .matches_path_with(Path::new("build"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+     fn glob_star_star_matches_multiple_segments() {[m
+[31m-        assert!(Pattern::new("**/*.log")[m
+[31m-            .unwrap()[m
+[31m-            .matches_path_with(Path::new("a/b/foo.log"), MATCH_OPTIONS));[m
+[31m-        assert!(Pattern::new("**/build")[m
+[31m-            .unwrap()[m
+[31m-            .matches_path_with(Path::new("src/build"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            Pattern::new("**/*.log")[m
+[32m+[m[32m                .unwrap()[m
+[32m+[m[32m                .matches_path_with(Path::new("a/b/foo.log"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            Pattern::new("**/build")[m
+[32m+[m[32m                .unwrap()[m
+[32m+[m[32m                .matches_path_with(Path::new("src/build"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+[36m@@ -163,12 +172,14 @@[m [mmod tests {[m
+         assert!(!rule.negated);[m
+         assert!(!rule.dir_only);[m
+         assert!(!rule.anchored);[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS));[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("a/b/foo.log"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("a/b/foo.log"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+[36m@@ -177,9 +188,10 @@[m [mmod tests {[m
+         assert!(!rule.negated);[m
+         assert!(rule.dir_only);[m
+         assert!(!rule.anchored);[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("build"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("build"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+[36m@@ -188,24 +200,30 @@[m [mmod tests {[m
+         assert!(!rule.negated);[m
+         assert!(!rule.dir_only);[m
+         assert!(rule.anchored);[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("build"), MATCH_OPTIONS));[m
+[31m-        assert!(!rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("src/build"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("build"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            !rule[m
+[32m+[m[32m                .pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("src/build"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+     fn parse_anchored_contains_slash() {[m
+         let rule = parse_line("src/generated", Path::new("")).unwrap();[m
+         assert!(rule.anchored);[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("src/generated"), MATCH_OPTIONS));[m
+[31m-        assert!(!rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("other/src/generated"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("src/generated"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            !rule[m
+[32m+[m[32m                .pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("other/src/generated"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+[36m@@ -233,12 +251,15 @@[m [mmod tests {[m
+     #[test][m
+     fn parse_trailing_whitespace_stripped() {[m
+         let rule = parse_line("*.log   ", Path::new("")).unwrap();[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS));[m
+[31m-        assert!(!rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("foo.log   "), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("foo.log"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            !rule[m
+[32m+[m[32m                .pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("foo.log   "), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ [m
+     #[test][m
+[36m@@ -366,8 +387,9 @@[m [mmod tests {[m
+         let rule = parse_line("src/generated/", Path::new("")).unwrap();[m
+         assert!(rule.anchored);[m
+         assert!(rule.dir_only);[m
+[31m-        assert!(rule[m
+[31m-            .pattern[m
+[31m-            .matches_path_with(Path::new("src/generated"), MATCH_OPTIONS));[m
+[32m+[m[32m        assert!([m
+[32m+[m[32m            rule.pattern[m
+[32m+[m[32m                .matches_path_with(Path::new("src/generated"), MATCH_OPTIONS)[m
+[32m+[m[32m        );[m
+     }[m
+ }[m
+[1mdiff --git a/src/rust_tree/icons.rs b/src/rust_tree/icons.rs[m
+[1mindex 78d816b..ac1d2cf 100644[m
+[1m--- a/src/rust_tree/icons.rs[m
+[1m+++ b/src/rust_tree/icons.rs[m
+[36m@@ -1,7 +1,7 @@[m
+[31m-use serde::Deserialize;[m
+[32m+[m[32muse simjson::JsonData::{Data, Text};[m
+ use std::{collections::HashMap, fs, path::Path};[m
+ [m
+[31m-#[derive(Deserialize)][m
+[32m+[m[32m#[derive(Debug, Default)][m
+ struct IconTheme {[m
+     extensions: HashMap<String, String>,[m
+     well_known: HashMap<String, String>,[m
+[36m@@ -39,6 +39,7 @@[m [mconst DEFAULT_ICON_THEME: &str = r#"{[m
+     "yaml": "📄",[m
+     "yml": "📄",[m
+     "toml": "⚙️",[m
+[32m+[m[32m    "7b": "⚙️",[m
+     "ini": "⚙️",[m
+     "cfg": "⚙️",[m
+     "conf": "⚙️",[m
+[36m@@ -170,12 +171,50 @@[m [mimpl IconManager {[m
+ [m
+     pub fn from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {[m
+         let data = fs::read_to_string(path)?;[m
+[31m-        let theme: IconTheme = serde_json::from_str(&data)?;[m
+[32m+[m[32m        let theme: IconTheme = Self::get_theme_from_str(&data);[m
+         Ok(Self { theme })[m
+     }[m
+ [m
+     fn load_default_theme() -> IconTheme {[m
+[31m-        serde_json::from_str(DEFAULT_ICON_THEME).unwrap()[m
+[32m+[m[32m        Self::get_theme_from_str(DEFAULT_ICON_THEME)[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    fn get_theme_from_str(s: &str) -> IconTheme {[m
+[32m+[m[32m        let Data(icon_theme) = simjson::parse(s) else {[m
+[32m+[m[32m            return IconTheme::default();[m
+[32m+[m[32m        };[m
+[32m+[m[32m        let Some(Data(extensions_dat)) = icon_theme.get("extensions") else {[m
+[32m+[m[32m            return IconTheme::default();[m
+[32m+[m[32m        };[m
+[32m+[m[32m        let mut extensions = HashMap::new();[m
+[32m+[m[32m        for (key, ext) in extensions_dat.iter() {[m
+[32m+[m[32m            if let Text(ext) = ext {[m
+[32m+[m[32m                extensions.insert(key.to_string(), ext.to_string());[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        let Some(Data(well_known_dat)) = icon_theme.get("well_known") else {[m
+[32m+[m[32m            return IconTheme::default();[m
+[32m+[m[32m        };[m
+[32m+[m[32m        let mut well_known = HashMap::new();[m
+[32m+[m[32m        for (key, known) in well_known_dat.iter() {[m
+[32m+[m[32m            if let Text(known) = known {[m
+[32m+[m[32m                well_known.insert(key.to_string(), known.to_string());[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        let Some(Data(icons_dat)) = icon_theme.get("icons") else {[m
+[32m+[m[32m            return IconTheme::default();[m
+[32m+[m[32m        };[m
+[32m+[m[32m        let mut icons = HashMap::new();[m
+[32m+[m[32m        for (key, icon) in icons_dat.iter() {[m
+[32m+[m[32m            if let Text(icon) = icon {[m
+[32m+[m[32m                icons.insert(key.to_string(), icon.to_string());[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        IconTheme {[m
+[32m+[m[32m            well_known,[m
+[32m+[m[32m            extensions,[m
+[32m+[m[32m            icons,[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+     pub fn get_icon_for_path(&self, path: &Path) -> &str {[m
+[1mdiff --git a/src/rust_tree/mod.rs b/src/rust_tree/mod.rs[m
+[1mindex 76c0ea4..69c50d6 100644[m
+[1m--- a/src/rust_tree/mod.rs[m
+[1m+++ b/src/rust_tree/mod.rs[m
+[36m@@ -6,3 +6,47 @@[m [mpub mod icons;[m
+ pub mod options;[m
+ pub mod traversal;[m
+ pub mod utils;[m
+[32m+[m
+[32m+[m[32muse std::path::Path;[m
+[32m+[m
+[32m+[m[32mpub struct MatchOptions {[m
+[32m+[m[32m    case_sensitive: bool,[m
+[32m+[m[32m    require_literal_separator: bool,[m
+[32m+[m[32m    require_literal_leading_dot: bool,[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m#[derive(Clone)][m
+[32m+[m[32mpub struct Pattern {[m
+[32m+[m[32m    pub before: Option<String>,[m
+[32m+[m[32m    pub after: String,[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mimpl Pattern {[m
+[32m+[m[32m    pub fn new(s: &str) -> Self {[m
+[32m+[m[32m        if let Some((before, after)) = s.split_once('*') {[m
+[32m+[m[32m            Pattern {[m
+[32m+[m[32m                before: Some(before.to_string()),[m
+[32m+[m[32m                after: after.to_string(),[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            Pattern {[m
+[32m+[m[32m                before: None,[m
+[32m+[m[32m                after: s.to_string(),[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m    pub fn matches(&self, s: &str) -> bool {[m
+[32m+[m[32m        if let Some(before) = &self.before[m
+[32m+[m[32m            && s.starts_with(before)[m
+[32m+[m[32m            && s.ends_with(&self.after)[m
+[32m+[m[32m        {[m
+[32m+[m[32m            true[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            self.before.is_none() && s == self.after[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    pub fn matches_path_with(&self, p: &Path, _ops: &MatchOptions) -> bool {[m
+[32m+[m[32m        self.matches(&p.display().to_string()) // options for later[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/rust_tree/options.rs b/src/rust_tree/options.rs[m
+[1mindex 295c7a1..1be9c58 100644[m
+[1m--- a/src/rust_tree/options.rs[m
+[1m+++ b/src/rust_tree/options.rs[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-use glob::Pattern;[m
+[32m+[m[32muse crate::rust_tree::Pattern;[m
+ [m
+ pub struct TreeOptions {[m
+     pub all_files: bool,[m
+[1mdiff --git a/src/rust_tree/traversal.rs b/src/rust_tree/traversal.rs[m
+[1mindex 25c783c..b183917 100644[m
+[1m--- a/src/rust_tree/traversal.rs[m
+[1m+++ b/src/rust_tree/traversal.rs[m
+[36m@@ -15,7 +15,7 @@[m [muse crate::rust_tree::icons::IconManager;[m
+ #[cfg(unix)][m
+ use crate::rust_tree::display::format_permissions_unix;[m
+ use crate::rust_tree::fromfile::{[m
+[31m-    build_virtual_tree, parse_file_listing, read_file_listing, FileEntry, VirtualTree,[m
+[32m+[m[32m    FileEntry, VirtualTree, build_virtual_tree, parse_file_listing, read_file_listing,[m
+ };[m
+ use crate::rust_tree::gitignore::GitignoreRules;[m
+ use crate::rust_tree::options::TreeOptions;[m
+[36m@@ -947,15 +947,15 @@[m [mfn display_virtual_entry<W: Write>([m
+     }[m
+ [m
+     // Add size if requested[m
+[31m-    if options.print_size || options.human_readable {[m
+[31m-        if let Some(size) = entry.size {[m
+[31m-            let size_str = if options.human_readable {[m
+[31m-                bytes_to_human_readable(size)[m
+[31m-            } else {[m
+[31m-                size.to_string()[m
+[31m-            };[m
+[31m-            display_name = format!("[{size_str}]  {display_name}");[m
+[31m-        }[m
+[32m+[m[32m    if (options.print_size || options.human_readable)[m
+[32m+[m[32m        && let Some(size) = entry.size[m
+[32m+[m[32m    {[m
+[32m+[m[32m        let size_str = if options.human_readable {[m
+[32m+[m[32m            bytes_to_human_readable(size)[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            size.to_string()[m
+[32m+[m[32m        };[m
+[32m+[m[32m        display_name = format!("[{size_str}]  {display_name}");[m
+     }[m
+ [m
+     // Apply colorization (simplified for virtual entries)[m
+[1mdiff --git a/src/rust_tree/utils.rs b/src/rust_tree/utils.rs[m
+[1mindex 5d97c74..b04cd90 100644[m
+[1m--- a/src/rust_tree/utils.rs[m
+[1m+++ b/src/rust_tree/utils.rs[m
+[36m@@ -35,10 +35,10 @@[m [mpub fn is_broken_pipe_error(err: &io::Error) -> bool {[m
+     // Check the source chain for BrokenPipe errors[m
+     let mut source = err.source();[m
+     while let Some(err) = source {[m
+[31m-        if let Some(io_err) = err.downcast_ref::<io::Error>() {[m
+[31m-            if io_err.kind() == ErrorKind::BrokenPipe {[m
+[31m-                return true;[m
+[31m-            }[m
+[32m+[m[32m        if let Some(io_err) = err.downcast_ref::<io::Error>()[m
+[32m+[m[32m            && io_err.kind() == ErrorKind::BrokenPipe[m
+[32m+[m[32m        {[m
+[32m+[m[32m            return true;[m
+         }[m
+         source = err.source();[m
+     }[m
