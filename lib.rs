@@ -237,15 +237,15 @@ pub struct CLI {
     oper_descr: Option<String>,
     glob_mode: WildCardExpansion,
     unprocessed: bool,
-    unknown: Vec<String>, // and add misused
-    src_args: Vec<String>,
+    unknown: Vec<String>,  // and add misused
+    src_args: Vec<String>, // TODO separate field as immutable
 }
 impl CLI {
     /// Create an empty CLI arguments descriptor
     ///
     pub fn new() -> Self {
-    let mut src_args = vec![];
-    let mut args = env::args();
+        let mut src_args = vec![];
+        let mut args = env::args();
         args.next(); // swallow first
         src_args.extend(args);
         CLI {
@@ -257,7 +257,7 @@ impl CLI {
             ..Default::default()
         }
     }
-    
+
     /// Create an empty CLI arguments descriptor from a vector of arguments
     ///
     pub fn from(src_args: Vec<String>) -> Self {
