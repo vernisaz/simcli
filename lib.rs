@@ -258,7 +258,7 @@ impl CLI {
         }
     }
 
-    /// Create an empty CLI arguments descriptor from a vector of arguments
+    /// Create an empty CLI arguments descriptor to parse a vector of arguments
     ///
     pub fn from(src_args: Vec<String>) -> Self {
         CLI {
@@ -301,7 +301,7 @@ impl CLI {
         });
         Ok(self)
     }
-    /// Specify common CLI description
+    /// Specify a common CLI description
     ///
     pub fn description(&mut self, descr: &str) -> &mut Self {
         match self.opts.last_mut() {
@@ -310,15 +310,16 @@ impl CLI {
         }
         self
     }
-    /// Add an alias to just created an argument option
+    /// Add an alias to just the created argument option
     ///
-    /// Several aliases can be added, aliases are usually created as a muli symbols alternatives
+    /// Several aliases can be added, aliases are usually created as a multi symbols alternatives
+    /// to an one symbol option
     ///
     /// # Examples
     ///
     /// ```
-    /// let cli = cli.opt("v", OptTyp::None).inspect_err(|e| eprintln!("{e}"));
-    /// cli.alias("-version").description("Provides a version of the product");
+    /// let cli = cli.opt("v", OptTyp::None).inspect_err(|e| eprintln!("{e}"))?;
+    /// cli.alias("-version")?.description("Provides a version of the product");
     /// ```
     pub fn alias(&mut self, name: &str) -> Result<&mut Self, OptError> {
         if !self.unprocessed {

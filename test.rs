@@ -16,8 +16,10 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
             .opt("c", OptTyp::Num)?
             .description("Number of times to greet [default: 1]")
             .opt("h", OptTyp::None)?
+            .alias("-help")?
             .description("Print help")
             .opt("v", OptTyp::None)?
+            .alias("-version")?
             .description("Print version")
             .opt("-long", OptTyp::Str)?
             .description("Long definition")
@@ -38,7 +40,7 @@ And options are:"#,
                 eprintln!("opt[{i}] {}={}", d.0, d.1);
             }
         } else {
-            eprintln!("no def  found")
+            eprintln!("no def found")
         }
         if let Some(OptVal::Str(value)) = cli.get_opt("-long") {
             println!("long - {value}")
