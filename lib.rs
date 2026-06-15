@@ -65,8 +65,18 @@ pub enum OptVal {
     Empty,
     Unmatch,
 }
-#[derive(Debug)]
+#[derive(Debug, Default)]
+enum OptStat {
+    Duplicate,
+    DupAlias,
+    NoOption,
+    #[default]
+    Other,
+}
+#[derive(Default, Debug)]
+#[allow(dead_code)]
 pub struct OptError {
+    problem_type: OptStat,
     cause: String,
 }
 impl fmt::Display for OptError {
@@ -207,11 +217,6 @@ impl Ord for CliOpt {
     }
 }
 
-enum OptStat {
-    Duplicate,
-    DupAlias,
-    NoOption,
-}
 /// Defines a combined storage for CLI argements description and real arguments data
 ///
 /// # Field details
@@ -282,6 +287,7 @@ impl CLI {
         if !self.unprocessed {
             return Err(OptError {
                 cause: format!("the option {name} can't be set after parsing arguments"),
+                ..Default::default()
             });
         }
         // opts are case insensitive on Windows
@@ -290,6 +296,7 @@ impl CLI {
         if self.get_opt_def(&name).is_ok() {
             return Err(OptError {
                 cause: format!("repeating option {name}"),
+                problem_type: OptStat::Duplicate,
             });
         }
         self.opts.push(CliOpt {
@@ -325,6 +332,7 @@ impl CLI {
         if !self.unprocessed {
             return Err(OptError {
                 cause: format!("the alias {name} can't be set after parsing arguments"),
+                ..Default::default()
             });
         }
         // opts are case insensitive on Windows
@@ -333,6 +341,7 @@ impl CLI {
         if self.get_opt_def(&name).is_ok() {
             return Err(OptError {
                 cause: format!("repeating alias {name}"),
+                problem_type: OptStat::DupAlias,
             });
         }
         match self.opts.last_mut() {
@@ -347,6 +356,7 @@ impl CLI {
             _ => {
                 return Err(OptError {
                     cause: "no current element to set alias to".to_string(),
+                    problem_type: OptStat::NoOption,
                 });
             }
         }
@@ -371,6 +381,7 @@ impl CLI {
             Err(OptError {
                 cause: "an operation description can be defined after setting - use_oper()"
                     .to_string(),
+                ..Default::default()
             })
         } else {
             self.oper_descr = Some(descr.to_string());
