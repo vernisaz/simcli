@@ -327,6 +327,14 @@ impl CLI {
                 cause: format!("the alias {name} can't be set after parsing arguments"),
             });
         }
+        // opts are case insensitive on Windows
+        #[cfg(target_os = "windows")]
+        let name = name.to_ascii_lowercase();
+        if self.get_opt_def(&name).is_ok() {
+            return Err(OptError {
+                cause: format!("repeating alias {name}"),
+            });
+        }
         match self.opts.last_mut() {
             Some(element) => {
                 if element.other.is_none() {
