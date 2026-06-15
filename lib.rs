@@ -571,6 +571,7 @@ impl CLI {
                         string.clear();
                     } else if opt.t == OptTyp::None
                         && opt.nme.chars().count() == 1
+                        && !sarg.starts_with('-')
                         && sarg.contains(&opt.nme)
                     {
                         opt.v = Some(OptVal::Empty);
