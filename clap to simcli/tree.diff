@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..3b58e3a 100644
+index 24e1993..091c122 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,223 @@
+@@ -1,258 +1,231 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -272,7 +272,7 @@ index 24e1993..3b58e3a 100644
 +        .opt("P", OptTyp::ArrStr)?
 +        .alias("-pattern")?
 +        .description("List only those files that match the wild-card pattern.")
-+        .opt("I", OptTyp::ArrStr)?
++        .opt(if cfg!(windows) {"x"} else {"I"}, OptTyp::ArrStr)?
 +        .alias("-exclude")?
 +        .description("Do not list files that match the wild-card pattern. May be repeated.")
 +        .opt("f", OptTyp::None)?
@@ -285,7 +285,7 @@ index 24e1993..3b58e3a 100644
 +        .alias("-no-color")?
 +        .description("Turn colorization off always (--no-color overrides --color).")
 +        
-+        .opt("A", OptTyp::None)?
++        .opt(if cfg!(windows) {"z"} else {"A"}, OptTyp::None)?
 +        .alias("-ansi")?
 +        .description("Turn on ANSI line graphics hack when printing the indentation lines.")
 +        .opt("t", OptTyp::None)?
@@ -294,7 +294,7 @@ index 24e1993..3b58e3a 100644
 +        .opt("r", OptTyp::None)?
 +        .alias("-reverse")?
 +        .description("Reverse the sort order.")
-+        .opt("D", OptTyp::None)?
++        .opt(if cfg!(windows) {"m"} else {"D"}, OptTyp::None)?
 +        .alias("-mod-date")?
 +        .description("Print the date of last modification.")
 +        .opt("o", OptTyp::Str)?
@@ -306,12 +306,12 @@ index 24e1993..3b58e3a 100644
 +        .opt("-dirsfirst", OptTyp::None)?
 +        .description("List directories before files.")
 +        
-+        .opt("F", OptTyp::None)?
++        .opt(if cfg!(windows) {"y"} else {"F"}, OptTyp::None)?
 +        .alias("-classify")?
 +        .description("Append indicator (one of */=@|%>) to entries.")
 +        .opt("-noreport", OptTyp::None)?
 +        .description("Omits printing of the file and directory report at the end of the tree listing.")
-+        .opt("p", OptTyp::None)?
++        .opt(if cfg!(windows) {"w"} else {"P"}, OptTyp::None)?
 +        .description("Print the protections for each file (unix only).")
 +        .opt("-fromfile", OptTyp::None)?
 +        .description("Read listing from file/stdin")
@@ -324,8 +324,10 @@ index 24e1993..3b58e3a 100644
 +        .description("Include directory names in -P pattern matching. Matched directories show all contents.")
 +        .opt("-gitignore", OptTyp::None)?
 +        .description("Exclude entries matching .gitignore rules.")
++        .opt("-version", OptTyp::None)?
++        .description("Version info.")
 +        .opt("?", OptTyp::None)?
-+        .alias("h")?
++        .alias("-help")?
 +        .description("Help for the utility.");
 +    Ok(cli)
  }
@@ -445,10 +447,10 @@ index 24e1993..3b58e3a 100644
  pub fn run_cli() -> io::Result<()> {
 -    let cli = Cli::parse();
 -    let options = cli_to_options(&cli).map_err(|e| {
-+    let mut cli = define_cli(CLI::new()).map_err(|_| {
++    let mut cli = define_cli(CLI::new()).map_err(|e| {
 +        io::Error::new(
 +            io::ErrorKind::InvalidInput,
-+            "Invalid CLI definition".to_string(),
++           format!("Invalid CLI definition - {e:?}"),
 +        )
 +    })?;
 +    let options = cli_to_options(&mut cli).map_err(|e| {
@@ -470,6 +472,12 @@ index 24e1993..3b58e3a 100644
 +                .bright()
 +                .blue()
 +        );
++        return Ok(());
++    }
++    if cli.get_opt("-version").is_some() {
++        println!("Tree directory view utility");
++        println!("Version 1.04, Source: https://github.com/peteretelej/tree");
++        println!("crates.io dependency free: https://www.linkedin.com/pulse/rust-people-like-myself-dmitriy-rogatkin-tqyoc");
 +        return Ok(());
 +    }
 +    list_directory(

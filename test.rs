@@ -21,6 +21,9 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
             .opt("v", OptTyp::None)?
             .alias("-version")?
             .description("Print version")
+            .opt(if cfg!(windows) { "R" } else { "H" }, OptTyp::None)?
+            .alias("-charm")?
+            .description("Nice feature")
             .opt("-long", OptTyp::Str)?
             .description("Long definition")
             .opt("-pat", OptTyp::ArrStr)?

@@ -290,15 +290,15 @@ impl CLI {
                 ..Default::default()
             });
         }
-        // opts are case insensitive on Windows
-        #[cfg(target_os = "windows")]
-        let name = name.to_ascii_lowercase();
-        if self.get_opt_def(&name).is_ok() {
+        if self.get_opt_def(name).is_ok() {
             return Err(OptError {
                 cause: format!("repeating option {name}"),
                 problem_type: OptStat::Duplicate,
             });
         }
+        // opts are case insensitive on Windows
+        #[cfg(target_os = "windows")]
+        let name = name.to_ascii_lowercase();
         self.opts.push(CliOpt {
             t,
             nme: name.to_string(),
@@ -335,10 +335,7 @@ impl CLI {
                 ..Default::default()
             });
         }
-        // opts are case insensitive on Windows
-        #[cfg(target_os = "windows")]
-        let name = name.to_ascii_lowercase();
-        if self.get_opt_def(&name).is_ok() {
+        if self.get_opt_def(name).is_ok() {
             return Err(OptError {
                 cause: format!("repeating alias {name}"),
                 problem_type: OptStat::DupAlias,
@@ -414,10 +411,15 @@ impl CLI {
     /// Get a CLI option
     ///
     pub fn get_opt(&mut self, name: &str) -> Option<&OptVal> {
+        // beter to return Result<Option<&OptVal>, error>
         if self.unprocessed {
             self.parse()
         }
-        self.get_opt_def(name).ok()
+
+        match self.get_opt_def(name).ok() {
+            Some(opt) => opt.v.as_ref(),
+            _ => None,
+        }
     }
     /// Returns first argument as an operation
     ///
@@ -455,20 +457,24 @@ impl CLI {
     }
 
     /// Used internally to check if the option is defined
-    fn get_opt_def(&self, name: &str) -> Result<&OptVal, OptStat> {
+    fn get_opt_def(&self, name: &str) -> Result<&CliOpt, OptStat> {
+        //eprintln!("searching {name}");
+        // opts are case insensitive on Windows
+        #[cfg(target_os = "windows")]
+        let name = name.to_ascii_lowercase();
         let mut found = None;
         for opt in &self.opts {
             if opt.nme == name {
                 if found.is_none() {
-                    found = opt.v.as_ref();
+                    found = Some(opt);
                 } else {
                     return Err(OptStat::Duplicate);
                 }
             } else if let Some(other) = &opt.other
-                && other.contains(name)
+                && other.contains(&name)
             {
                 if found.is_none() {
-                    found = opt.v.as_ref();
+                    found = Some(opt);
                 } else {
                     return Err(OptStat::DupAlias);
                 }
@@ -502,6 +508,10 @@ impl CLI {
             }
             if let Some(sarg) = arg.strip_prefix(OPT_PREFIX) {
                 let mut string = sarg.to_string();
+                if string.is_empty() {
+                    self.unknown.push(String::new());
+                    continue;
+                }
                 let mut was_input_opt = false;
                 for opt in &mut self.opts {
                     //eprintln!("checking {} ags {string}", opt.nme);
@@ -554,21 +564,20 @@ impl CLI {
                             self.unknown.push(string.clone()) // not right because it's a duplicate argument
                         }
                         string.clear();
-                    } else if opt.t == OptTyp::InStr && sarg.starts_with(&opt.nme) {
+                    } else if opt.t == OptTyp::InStr
+                        && (cfg!(windows) && sarg.to_ascii_lowercase().starts_with(&opt.nme)
+                            || sarg.starts_with(&opt.nme))
+                    {
                         if opt.v.is_none() {
                             opt.v = Some(OptVal::Arr(HashSet::new()))
                         }
                         match &mut opt.v {
                             &mut Some(OptVal::Arr(ref mut set)) => {
-                                if let Some(pair) =
-                                    sarg.strip_prefix(&opt.nme).unwrap().split_once('=')
-                                {
+                                let opt_def = sarg[opt.nme.len()..].to_string();
+                                if let Some(pair) = opt_def.split_once('=') {
                                     set.insert((pair.0.to_string(), pair.1.to_string()));
                                 } else {
-                                    set.insert((
-                                        sarg.strip_prefix(&opt.nme).unwrap().to_string(),
-                                        String::new(),
-                                    ));
+                                    set.insert((opt_def, String::new()));
                                 }
                             }
                             _ => {
@@ -583,8 +592,9 @@ impl CLI {
                     } else if opt.t == OptTyp::None
                         && opt.nme.chars().count() == 1
                         && !sarg.starts_with('-')
-                        && sarg.contains(&opt.nme)
+                        && string.contains(&opt.nme)
                     {
+                        //eprintln!("found {opt:?} ags {string}", opt.nme);
                         opt.v = Some(OptVal::Empty);
                         string.retain(|c| c != opt.nme.chars().next().unwrap());
                     } else if let Some(last) = string.chars().last()
