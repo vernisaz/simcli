@@ -461,17 +461,17 @@ impl CLI {
         //eprintln!("searching {name}");
         // opts are case insensitive on Windows
         #[cfg(target_os = "windows")]
-        let name = name.to_ascii_lowercase();
+        let name = &name.to_ascii_lowercase();
         let mut found = None;
         for opt in &self.opts {
-            if opt.nme == name {
+            if opt.nme == *name {
                 if found.is_none() {
                     found = Some(opt);
                 } else {
                     return Err(OptStat::Duplicate);
                 }
             } else if let Some(other) = &opt.other
-                && other.contains(&name)
+                && other.contains(name)
             {
                 if found.is_none() {
                     found = Some(opt);
