@@ -410,15 +410,18 @@ impl CLI {
     }
     /// Get a CLI option
     ///
-    pub fn get_opt(&mut self, name: &str) -> Option<&OptVal> {
+    pub fn get_opt(&mut self, name: &str) -> Result<Option<&OptVal>, OptError> {
         // beter to return Result<Option<&OptVal>, error>
         if self.unprocessed {
             self.parse()
         }
 
         match self.get_opt_def(name).ok() {
-            Some(opt) => opt.v.as_ref(),
-            _ => None,
+            Some(opt) => Ok(opt.v.as_ref()),
+            _ => Err(OptError {
+                problem_type: OptStat::NoOption,
+                cause: format!("The option ({name}) isn't defined"),
+            }),
         }
     }
     /// Returns first argument as an operation
@@ -766,8 +769,11 @@ impl CliNoMut {
     }
     /// Get a CLI option
     ///
-    pub fn get_opt(&self, name: &str) -> Option<OptVal> {
-        self.cli.borrow_mut().get_opt(name).cloned()
+    pub fn get_opt(&self, name: &str) -> Result<Option<OptVal>, OptError> {
+        match self.cli.borrow_mut().get_opt(name) {
+            Ok(opt) => Ok(opt.cloned()),
+            Err(err) => Err(err),
+        }
     }
     /// Returns first argument as an operation
     ///
