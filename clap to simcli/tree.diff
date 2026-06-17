@@ -57,7 +57,7 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..ff80c90 100644
+index 24e1993..088a3cb 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
 @@ -1,258 +1,265 @@
@@ -311,7 +311,7 @@ index 24e1993..ff80c90 100644
 +        .description("Append indicator (one of */=@|%>) to entries.")
 +        .opt("-noreport", OptTyp::None)?
 +        .description("Omits printing of the file and directory report at the end of the tree listing.")
-+        .opt(if cfg!(windows) {"w"} else {"P"}, OptTyp::None)?
++        .opt(if cfg!(windows) {"w"} else {"p"}, OptTyp::None)?
 +        .description("Print the protections for each file (unix only).")
 +        .opt("-fromfile", OptTyp::None)?
 +        .description("Read listing from file/stdin")
