@@ -25,18 +25,19 @@ Define the arguments first,
 use simcli::{OptTyp,OptVal,CLI};
 ...
 let mut cli = CLI::new();
-cli.opt("n", OptTyp::Num)?.description("Number of lines")
+cli.opt("n", OptTyp::Num)?.description("Number of lines")?
+    .alias("-num")?
     .opt("v", OptTyp::None)?.description("Version").opt("h", OptTyp::None)?;
 ```
 
 You can pull the required arguments after,
 ```rust
-if cli.get_opt("v") == Some(&OptVal::Empty) {
+if cli.get_opt("v")? == Some(&OptVal::Empty) {
     return Ok(println!("\nVersion {VERSION}"))
-} else if cli.get_opt("h") == Some(&OptVal::Empty) {
+} else if cli.get_opt("h")? == Some(&OptVal::Empty) {
     return Ok(println!("simtail [opts] <file path>[ ...<file path>]\n{}", cli.get_description()?))
 }
-let lns = match cli.get_opt("n") {
+let lns = match cli.get_opt("n")? {
     Some(OptVal::Num(n)) => *n as usize,
     _ => 15usize
 };
@@ -50,7 +51,7 @@ using the code bellow,
 ```rust
 cli.opt("D", OptTyp::InStr)?.description("A definition as name=value");
 // and then read their presences in the command line
-let d_o = cli.get_opt("D");
+let d_o = cli.get_opt("D")?;
 if let Some(OptVal::Arr(d_o)) = d_o {
     for (i,d) in d_o.into_iter().enumerate() {
         println!("opt[{i}] {d:?}");
@@ -86,3 +87,8 @@ can consume more memory.
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml manifest can be easy added, since there are no dependencies).
 Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when you use *RB*.
+
+## Where it's used
+- [SimTee](https://github.com/vernisaz/simtee)
+- [SimLogTail](https://github.com/vernisaz/simlogtail)
+- [SimHTTP](https://github.com/vernisaz/simhttp)
