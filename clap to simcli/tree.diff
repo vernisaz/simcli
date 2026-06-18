@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..67652d0 100644
+index 24e1993..dabb431 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,265 @@
+@@ -1,258 +1,269 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -365,7 +365,8 @@ index 24e1993..67652d0 100644
 +        vec![]
 +    };
 +
-+    let exclude_patterns: Vec<Pattern> = if let Ok(Some(OptVal::ArrStr(exclude))) = cli.get_opt(if cfg!(windows) {"x"} else {"I"})
++    let exclude_patterns: Vec<Pattern> = if let Ok(Some(OptVal::ArrStr(exclude))) =
++        cli.get_opt(if cfg!(windows) { "x" } else { "I" })
 +    {
 +        exclude
 +            .iter()
@@ -425,7 +426,10 @@ index 24e1993..67652d0 100644
 -        gitignore: cli.gitignore,
 +        color: cli.get_opt("-color").map_err(|_| "no such option -color")? == Some(&OptVal::Empty), // cli.color,
 +        no_color: cli.get_opt("n").map_err(|_| "no such option n")? == Some(&OptVal::Empty), // cli.no_color,
-+        ascii: cli.get_opt(if cfg!(windows) {"z"} else {"A"}).map_err(|_| "no such option A")? == Some(&OptVal::Empty), // cli.ascii,
++        ascii: cli
++            .get_opt(if cfg!(windows) { "z" } else { "A" })
++            .map_err(|_| "no such option A")?
++            == Some(&OptVal::Empty), // cli.ascii,
 +        sort_by_time: cli.get_opt("t").map_err(|_| "no such option t")? == Some(&OptVal::Empty), // cli.sort_by_time,
 +        reverse: cli.get_opt("r").map_err(|_| "no such option r")? == Some(&OptVal::Empty), // cli.reverse,
 +        print_mod_date: cli.get_opt("D").map_err(|_| "no such option D")? == Some(&OptVal::Empty), // cli.print_mod_date,
@@ -844,10 +848,10 @@ index 78d816b..ac1d2cf 100644
  
      pub fn get_icon_for_path(&self, path: &Path) -> &str {
 diff --git a/src/rust_tree/mod.rs b/src/rust_tree/mod.rs
-index 76c0ea4..69c50d6 100644
+index 76c0ea4..5ea5c39 100644
 --- a/src/rust_tree/mod.rs
 +++ b/src/rust_tree/mod.rs
-@@ -6,3 +6,47 @@ pub mod icons;
+@@ -6,3 +6,66 @@ pub mod icons;
  pub mod options;
  pub mod traversal;
  pub mod utils;
@@ -856,7 +860,9 @@ index 76c0ea4..69c50d6 100644
 +
 +pub struct MatchOptions {
 +    case_sensitive: bool,
++    #[allow(unused)]
 +    require_literal_separator: bool,
++    #[allow(unused)]
 +    require_literal_leading_dot: bool,
 +}
 +
@@ -891,8 +897,25 @@ index 76c0ea4..69c50d6 100644
 +        }
 +    }
 +
-+    pub fn matches_path_with(&self, p: &Path, _ops: &MatchOptions) -> bool {
-+        self.matches(&p.display().to_string()) // options for later
++    pub fn matches_path_with(&self, p: &Path, options: &MatchOptions) -> bool {
++        let s = if options.case_sensitive {
++            p.display().to_string()
++        } else {
++            p.display().to_string().to_ascii_lowercase()
++        };
++        if options.case_sensitive {
++            self.matches(&s)
++        } else {
++            if let Some(before) = &self.before
++                && let before = before.to_ascii_lowercase()
++                && s.starts_with(&before)
++                && s.ends_with(&self.after.to_ascii_lowercase())
++            {
++                true
++            } else {
++                self.before.is_none() && s == self.after.to_ascii_lowercase()
++            }
++        }
 +    }
 +}
 diff --git a/src/rust_tree/options.rs b/src/rust_tree/options.rs
