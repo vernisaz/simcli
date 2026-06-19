@@ -57,7 +57,7 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..dabb431 100644
+index 24e1993..155017b 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
 @@ -1,258 +1,269 @@
@@ -269,7 +269,7 @@ index 24e1993..dabb431 100644
 +        .opt("H", OptTyp::None)?
 +        .alias("-human-readable")?
 +        .description("Print the size in a more human-readable format.")
-+        .opt("P", OptTyp::ArrStr)?
++        .opt("p", OptTyp::ArrStr)?
 +        .alias("-pattern")?
 +        .description("List only those files that match the wild-card pattern.")
 +        .opt(if cfg!(windows) {"x"} else {"I"}, OptTyp::ArrStr)?
