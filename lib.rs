@@ -420,7 +420,11 @@ impl CLI {
             Some(opt) => Ok(opt.v.as_ref()),
             _ => Err(OptError {
                 problem_type: OptStat::NoOption,
-                cause: format!("The option ({name}) isn't defined"),
+                cause: format!(
+                    "The option ({name}) isn't defined at {}:{}",
+                    file!(),
+                    line!()
+                ),
             }),
         }
     }
