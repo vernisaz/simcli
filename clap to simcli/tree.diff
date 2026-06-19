@@ -588,7 +588,7 @@ index f82f0ce..cb8e3bb 100644
              _ => text.to_string(),
          }
 diff --git a/src/rust_tree/gitignore.rs b/src/rust_tree/gitignore.rs
-index 12a7d14..bd026b4 100644
+index 12a7d14..3bc5a2c 100644
 --- a/src/rust_tree/gitignore.rs
 +++ b/src/rust_tree/gitignore.rs
 @@ -1,4 +1,5 @@
@@ -598,16 +598,36 @@ index 12a7d14..bd026b4 100644
  use std::fs;
  use std::path::{Path, PathBuf};
  
-@@ -50,7 +51,7 @@ fn parse_line(line: &str, source_dir: &Path) -> Option<GitignoreRule> {
-         s = format!("**/{s}");
-     }
+@@ -37,26 +38,13 @@ fn parse_line(line: &str, source_dir: &Path) -> Option<GitignoreRule> {
+         None => (false, s),
+     };
  
+-    let (has_leading_slash, s) = match s.strip_prefix('/') {
+-        Some(rest) => (true, rest),
+-        None => (false, s),
+-    };
+-
+-    let mut s = s.to_string();
+-
+-    let anchored = has_leading_slash || s.contains('/');
+-
+-    if !anchored {
+-        s = format!("**/{s}");
+-    }
+-
 -    let pattern = Pattern::new(&s).ok()?;
-+    let pattern = Pattern::new(&s);
++    let pattern = Pattern::new(s);
  
      Some(GitignoreRule {
          pattern,
-@@ -121,7 +122,7 @@ impl GitignoreRules {
+         negated,
+         dir_only,
+-        anchored,
++        anchored: false,
+         source_dir: source_dir.to_path_buf(),
+     })
+ }
+@@ -121,7 +109,7 @@ impl GitignoreRules {
              } else {
                  rel_path
              };
@@ -616,7 +636,7 @@ index 12a7d14..bd026b4 100644
                  ignored = !rule.negated;
              }
          }
-@@ -139,22 +140,30 @@ mod tests {
+@@ -139,22 +127,30 @@ mod tests {
  
      #[test]
      fn glob_star_star_matches_zero_segments() {
@@ -659,7 +679,7 @@ index 12a7d14..bd026b4 100644
      }
  
      #[test]
-@@ -163,12 +172,14 @@ mod tests {
+@@ -163,12 +159,14 @@ mod tests {
          assert!(!rule.negated);
          assert!(!rule.dir_only);
          assert!(!rule.anchored);
@@ -680,7 +700,7 @@ index 12a7d14..bd026b4 100644
      }
  
      #[test]
-@@ -177,9 +188,10 @@ mod tests {
+@@ -177,9 +175,10 @@ mod tests {
          assert!(!rule.negated);
          assert!(rule.dir_only);
          assert!(!rule.anchored);
@@ -694,7 +714,7 @@ index 12a7d14..bd026b4 100644
      }
  
      #[test]
-@@ -188,24 +200,30 @@ mod tests {
+@@ -188,24 +187,30 @@ mod tests {
          assert!(!rule.negated);
          assert!(!rule.dir_only);
          assert!(rule.anchored);
@@ -737,7 +757,7 @@ index 12a7d14..bd026b4 100644
      }
  
      #[test]
-@@ -233,12 +251,15 @@ mod tests {
+@@ -233,12 +238,15 @@ mod tests {
      #[test]
      fn parse_trailing_whitespace_stripped() {
          let rule = parse_line("*.log   ", Path::new("")).unwrap();
@@ -759,7 +779,7 @@ index 12a7d14..bd026b4 100644
      }
  
      #[test]
-@@ -366,8 +387,9 @@ mod tests {
+@@ -366,8 +374,9 @@ mod tests {
          let rule = parse_line("src/generated/", Path::new("")).unwrap();
          assert!(rule.anchored);
          assert!(rule.dir_only);
