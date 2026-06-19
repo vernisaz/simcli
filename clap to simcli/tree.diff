@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..155017b 100644
+index 24e1993..a1a524c 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,269 @@
+@@ -1,258 +1,244 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -269,7 +269,7 @@ index 24e1993..155017b 100644
 +        .opt("H", OptTyp::None)?
 +        .alias("-human-readable")?
 +        .description("Print the size in a more human-readable format.")
-+        .opt("p", OptTyp::ArrStr)?
++        .opt("P", OptTyp::ArrStr)?
 +        .alias("-pattern")?
 +        .description("List only those files that match the wild-card pattern.")
 +        .opt(if cfg!(windows) {"x"} else {"I"}, OptTyp::ArrStr)?
@@ -353,20 +353,21 @@ index 24e1993..155017b 100644
 -        .filter(|s| !s.is_empty())
 -        .map(parse_glob_pattern)
 -        .collect::<Result<Vec<_>, _>>()?;
-+    let pattern_glob: Vec<Pattern> = if let Ok(Some(OptVal::ArrStr(patterns))) = cli.get_opt("P") {
-+        patterns
-+            .iter()
-+            .flat_map(|s| s.split('|'))
-+            .map(|s| s.trim())
-+            .filter(|s| !s.is_empty())
-+            .map(parse_glob_pattern)
-+            .collect::<Result<Vec<_>, _>>()?
-+    } else {
-+        vec![]
-+    };
++    let pattern_glob: Vec<Pattern> =
++        if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("P").unwrap() {
++            patterns
++                .iter()
++                .flat_map(|s| s.split('|'))
++                .map(|s| s.trim())
++                .filter(|s| !s.is_empty())
++                .map(parse_glob_pattern)
++                .collect::<Result<Vec<_>, _>>()?
++        } else {
++            vec![]
++        };
 +
-+    let exclude_patterns: Vec<Pattern> = if let Ok(Some(OptVal::ArrStr(exclude))) =
-+        cli.get_opt(if cfg!(windows) { "x" } else { "I" })
++    let exclude_patterns: Vec<Pattern> = if let Some(OptVal::ArrStr(exclude)) =
++        cli.get_opt(if cfg!(windows) { "x" } else { "I" }).unwrap()
 +    {
 +        exclude
 +            .iter()
@@ -387,26 +388,20 @@ index 24e1993..155017b 100644
 -        no_indent: cli.no_indent,
 -        print_size: cli.print_size,
 -        human_readable: cli.human_readable,
-+        all_files: cli.get_opt("a").map_err(|_| "no such option a")? == Some(&OptVal::Empty), //all_files,
-+        level: if let Some(OptVal::Num(level)) = cli.get_opt("L").map_err(|_| "no such option L")? {
++        all_files: cli.get_opt("a").unwrap() == Some(&OptVal::Empty), //all_files,
++        level: if let Some(OptVal::Num(level)) = cli.get_opt("L").unwrap() {
 +            Some(*level as u32)
 +        } else {
 +            None
 +        }, //cli.level,
-+        full_path: cli.get_opt("f").map_err(|_| "no such option f")? == Some(&OptVal::Empty), // cli.full_path,
-+        dir_only: cli.get_opt("d").map_err(|_| "no such option d")? == Some(&OptVal::Empty), // cli.dir_only,
-+        no_indent: cli
-+            .get_opt("-no-indent")
-+            .map_err(|_| "no such option no-ident")?
-+            == Some(&OptVal::Empty), // cli.no_indent,
-+        print_size: cli.get_opt("s").map_err(|_| "no such option s")? == Some(&OptVal::Empty), // cli.print_size,
-+        human_readable: cli.get_opt("H").map_err(|_| "no such option H")? == Some(&OptVal::Empty), // cli.human_readable,
++        full_path: cli.get_opt("f").unwrap() == Some(&OptVal::Empty), // cli.full_path,
++        dir_only: cli.get_opt("d").unwrap() == Some(&OptVal::Empty),  // cli.dir_only,
++        no_indent: cli.get_opt("-no-indent").unwrap() == Some(&OptVal::Empty), // cli.no_indent,
++        print_size: cli.get_opt("s").unwrap() == Some(&OptVal::Empty), // cli.print_size,
++        human_readable: cli.get_opt("H").unwrap() == Some(&OptVal::Empty), // cli.human_readable,
          pattern_glob,
 -        match_dirs: cli.match_dirs,
-+        match_dirs: cli
-+            .get_opt("-matchdirs")
-+            .map_err(|_| "no such option matchdirs")?
-+            == Some(&OptVal::Empty), // cli.match_dirs,
++        match_dirs: cli.get_opt("-matchdirs").unwrap() == Some(&OptVal::Empty), // cli.match_dirs,
          exclude_patterns,
 -        color: cli.color,
 -        no_color: cli.no_color,
@@ -424,50 +419,30 @@ index 24e1993..155017b 100644
 -        icons: cli.icons,
 -        prune: cli.prune,
 -        gitignore: cli.gitignore,
-+        color: cli.get_opt("-color").map_err(|_| "no such option -color")? == Some(&OptVal::Empty), // cli.color,
-+        no_color: cli.get_opt("n").map_err(|_| "no such option n")? == Some(&OptVal::Empty), // cli.no_color,
-+        ascii: cli
-+            .get_opt(if cfg!(windows) { "z" } else { "A" })
-+            .map_err(|_| "no such option A")?
-+            == Some(&OptVal::Empty), // cli.ascii,
-+        sort_by_time: cli.get_opt("t").map_err(|_| "no such option t")? == Some(&OptVal::Empty), // cli.sort_by_time,
-+        reverse: cli.get_opt("r").map_err(|_| "no such option r")? == Some(&OptVal::Empty), // cli.reverse,
-+        print_mod_date: cli.get_opt("D").map_err(|_| "no such option D")? == Some(&OptVal::Empty), // cli.print_mod_date,
-+        output_file: if let Some(OptVal::Str(path)) =
-+            cli.get_opt("o").map_err(|_| "no such option o")?
-+        {
++        color: cli.get_opt("-color").unwrap() == Some(&OptVal::Empty), // cli.color,
++        no_color: cli.get_opt("n").unwrap() == Some(&OptVal::Empty),   // cli.no_color,
++        ascii: cli.get_opt(if cfg!(windows) { "z" } else { "A" }).unwrap() == Some(&OptVal::Empty), // cli.ascii,
++        sort_by_time: cli.get_opt("t").unwrap() == Some(&OptVal::Empty), // cli.sort_by_time,
++        reverse: cli.get_opt("r").unwrap() == Some(&OptVal::Empty),      // cli.reverse,
++        print_mod_date: cli.get_opt("D").unwrap() == Some(&OptVal::Empty), // cli.print_mod_date,
++        output_file: if let Some(OptVal::Str(path)) = cli.get_opt("o").unwrap() {
 +            Some(path.to_string())
 +        } else {
 +            None
 +        }, // cli.output_file.clone(),
-+        file_limit: if let Some(OptVal::Num(limit)) =
-+            cli.get_opt("#").map_err(|_| "no such option #")?
-+        {
++        file_limit: if let Some(OptVal::Num(limit)) = cli.get_opt("#").unwrap() {
 +            Some(*limit as u64)
 +        } else {
 +            None
 +        }, // cli.file_limit,
-+        dirs_first: cli
-+            .get_opt("-dirsfirst")
-+            .map_err(|_| "no such option -dirsfirst")?
-+            == Some(&OptVal::Empty), // cli.dirs_first,
-+        classify: cli.get_opt("F").map_err(|_| "no such option F")? == Some(&OptVal::Empty), // cli.classify,
-+        no_report: cli
-+            .get_opt("-noreport")
-+            .map_err(|_| "no such option -noreport")?
-+            == Some(&OptVal::Empty), // cli.no_report,
-+        print_permissions: cli.get_opt("p").map_err(|_| "no such option p")?
-+            == Some(&OptVal::Empty), // cli.print_permissions,
-+        from_file: cli
-+            .get_opt("-fromfile")
-+            .map_err(|_| "no such option -fromfile")?
-+            == Some(&OptVal::Empty), // cli.fromfile,
-+        icons: cli.get_opt("-icons").map_err(|_| "no such option -icons")? == Some(&OptVal::Empty), // cli.icons,
-+        prune: cli.get_opt("-prune").map_err(|_| "no such option -prune")? == Some(&OptVal::Empty), // cli.prune,
-+        gitignore: cli
-+            .get_opt("-gitignore")
-+            .map_err(|_| "no such option -gitignore")?
-+            == Some(&OptVal::Empty), // cli.gitignore,
++        dirs_first: cli.get_opt("-dirsfirst").unwrap() == Some(&OptVal::Empty), // cli.dirs_first,
++        classify: cli.get_opt("F").unwrap() == Some(&OptVal::Empty),     // cli.classify,
++        no_report: cli.get_opt("-noreport").unwrap() == Some(&OptVal::Empty), // cli.no_report,
++        print_permissions: cli.get_opt("p").unwrap() == Some(&OptVal::Empty), // cli.print_permissions,
++        from_file: cli.get_opt("-fromfile").unwrap() == Some(&OptVal::Empty), // cli.fromfile,
++        icons: cli.get_opt("-icons").unwrap() == Some(&OptVal::Empty),        // cli.icons,
++        prune: cli.get_opt("-prune").unwrap() == Some(&OptVal::Empty),        // cli.prune,
++        gitignore: cli.get_opt("-gitignore").unwrap() == Some(&OptVal::Empty), // cli.gitignore,
      })
  }
  
