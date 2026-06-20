@@ -83,6 +83,14 @@ if let Some(errors) = cli.get_errors() {
 Since CLI requires mutability, you can also use `CliNoMut` immutable variant, however it
 can consume more memory.
 
+It's recommended to use `unwrap` when you access options, because if you accidentally misspell an option name,
+you get a convenient error report as:
+
+> thread 'main' (14676) panicked at C:\Users\sunil\projects\simcli\test.rs:86:69:
+called `Result::unwrap()` on an `Err` value: OptError { problem_type: NoOption, cause: "The option (-pattern) isn't defined" }
+
+Helping to correct the problem.
+
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml manifest can be easy added, since there are no dependencies).
