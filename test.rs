@@ -37,21 +37,21 @@ commit - commit.
 And options are:"#,
             )?;
         let _ = cli.process_wildcard(WildCardExpansion::All);
-        let d_o = cli.get_opt("D");
-        if let Ok(Some(OptVal::Arr(d_o))) = d_o {
+        let d_o = cli.get_opt("D").unwrap();
+        if let Some(OptVal::Arr(d_o)) = d_o {
             for (i, d) in d_o.into_iter().enumerate() {
                 eprintln!("opt[{i}] {}={}", d.0, d.1);
             }
         } else {
             eprintln!("no def found")
         }
-        if let Ok(Some(OptVal::Str(value))) = cli.get_opt("-long") {
+        if let Some(OptVal::Str(value)) = cli.get_opt("-long").unwrap() {
             println!("long - {value}")
         }
-        if cli.get_opt("k").ok().is_some() {
+        if cli.get_opt("k").unwrap().is_some() {
             println!("k is defined")
         }
-        if cli.get_opt("v").ok().is_some() {
+        if cli.get_opt("v").unwrap().is_some() {
             println!("version - {}", simcli::get_version())
         }
         let _ = cli.opt("X", OptTyp::Str).inspect_err(|e| eprintln!("{e}"));
@@ -67,7 +67,7 @@ And options are:"#,
             eprintln!("Unknown options - {errors:?}")
         }
     }
-    if let Ok(Some(OptVal::Str(name))) = cli.get_opt("n") {
+    if let Some(OptVal::Str(name)) = cli.get_opt("n").unwrap() {
         for _ in 0..if let Ok(Some(OptVal::Num(count))) = cli.get_opt("c")
             && count > 0
         {
@@ -77,10 +77,13 @@ And options are:"#,
         } {
             eprintln!("Hello {name}!");
         }
-    } else if cli.get_opt("h").ok().is_some() || cli.get_errors().is_some() {
+    } else if cli.get_opt("h").unwrap().is_some() || cli.get_errors().is_some() {
         eprintln!("{}", cli.get_description().unwrap())
     }
-    if let Ok(Some(OptVal::ArrStr(patterns))) = cli.get_opt("-pat") {
+    if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pat").unwrap() {
+        eprintln!("patterns: {patterns:?}")
+    }
+    if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pattern").unwrap() {
         eprintln!("patterns: {patterns:?}")
     }
     Ok(())

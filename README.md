@@ -32,12 +32,12 @@ cli.opt("n", OptTyp::Num)?.description("Number of lines")?
 
 You can pull the required arguments after,
 ```rust
-if cli.get_opt("v")? == Some(&OptVal::Empty) {
+if cli.get_opt("v").unwrap() == Some(&OptVal::Empty) {
     return Ok(println!("\nVersion {VERSION}"))
-} else if cli.get_opt("h")? == Some(&OptVal::Empty) {
+} else if cli.get_opt("h").unwrap() == Some(&OptVal::Empty) {
     return Ok(println!("simtail [opts] <file path>[ ...<file path>]\n{}", cli.get_description()?))
 }
-let lns = match cli.get_opt("n")? {
+let lns = match cli.get_opt("n").unwrap() {
     Some(OptVal::Num(n)) => *n as usize,
     _ => 15usize
 };
@@ -51,7 +51,7 @@ using the code bellow,
 ```rust
 cli.opt("D", OptTyp::InStr)?.description("A definition as name=value");
 // and then read their presences in the command line
-let d_o = cli.get_opt("D")?;
+let d_o = cli.get_opt("D").unwrap();
 if let Some(OptVal::Arr(d_o)) = d_o {
     for (i,d) in d_o.into_iter().enumerate() {
         println!("opt[{i}] {d:?}");
