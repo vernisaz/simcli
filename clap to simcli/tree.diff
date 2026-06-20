@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..a1a524c 100644
+index 24e1993..59b9b42 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,244 @@
+@@ -1,258 +1,239 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -466,11 +466,7 @@ index 24e1993..a1a524c 100644
 +            "The following options {bad_opts:?} are not recognized or duplicated"
 +        )));
 +    }
-+    if cli
-+        .get_opt("?")
-+        .map_err(|_| io::Error::other("no option ? defined"))?
-+        == Some(&OptVal::Empty)
-+    {
++    if cli.get_opt("?").unwrap() == Some(&OptVal::Empty) {
 +        println!("Usage: simtree [options...] [<dir>]");
 +        println!(
 +            "{}",
@@ -481,13 +477,12 @@ index 24e1993..a1a524c 100644
 +        );
 +        return Ok(());
 +    }
-+    if cli
-+        .get_opt("-version")
-+        .map_err(|_| io::Error::other("no option ? defined"))?
-+        == Some(&OptVal::Empty)
-+    {
++    if cli.get_opt("-version").unwrap() == Some(&OptVal::Empty) {
 +        println!("Tree directory view utility");
-+        println!("Version 1.04, Source: https://github.com/peteretelej/tree");
++        println!(
++            "Version {}, Source: https://github.com/peteretelej/tree",
++            env!("VERSION")
++        );
 +        println!(
 +            "crates.io dependency free: https://www.linkedin.com/pulse/rust-people-like-myself-dmitriy-rogatkin-tqyoc"
 +        );
