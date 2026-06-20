@@ -68,11 +68,14 @@ And options are:"#,
         }
     }
     if let Some(OptVal::Str(name)) = cli.get_opt("n").unwrap() {
-        for _ in 0..if let Ok(Some(OptVal::Num(count))) = cli.get_opt("c")
+        for _ in 0..if let Some(OptVal::Num(count)) = cli.get_opt("c").unwrap()
             && count > 0
         {
             dbg!(count)
         } else {
+            if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pattern").unwrap() {
+                eprintln!("patterns: {patterns:?}")
+            }
             1
         } {
             eprintln!("Hello {name}!");
@@ -81,9 +84,6 @@ And options are:"#,
         eprintln!("{}", cli.get_description().unwrap())
     }
     if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pat").unwrap() {
-        eprintln!("patterns: {patterns:?}")
-    }
-    if let Some(OptVal::ArrStr(patterns)) = cli.get_opt("-pattern").unwrap() {
         eprintln!("patterns: {patterns:?}")
     }
     Ok(())
