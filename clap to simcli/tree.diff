@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..59b9b42 100644
+index 24e1993..d8b6655 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,239 @@
+@@ -1,258 +1,234 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -311,7 +311,7 @@ index 24e1993..59b9b42 100644
 +        .description("Append indicator (one of */=@|%>) to entries.")
 +        .opt("-noreport", OptTyp::None)?
 +        .description("Omits printing of the file and directory report at the end of the tree listing.")
-+        .opt(if cfg!(windows) {"w"} else {"P"}, OptTyp::None)?
++        .opt(if cfg!(windows) {"w"} else {"p"}, OptTyp::None)?
 +        .description("Print the protections for each file (unix only).")
 +        .opt("-fromfile", OptTyp::None)?
 +        .description("Read listing from file/stdin")
@@ -450,14 +450,10 @@ index 24e1993..59b9b42 100644
  pub fn run_cli() -> io::Result<()> {
 -    let cli = Cli::parse();
 -    let options = cli_to_options(&cli).map_err(|e| {
-+    let mut cli = define_cli(CLI::new()).map_err(|e| {
-+        io::Error::new(
-+            io::ErrorKind::InvalidInput,
-+            format!("Invalid CLI definition - {e:?}"),
-+        )
-+    })?;
+-        io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid pattern: {e}"))
++    let mut cli = define_cli(CLI::new()).unwrap();
 +    let options = cli_to_options(&mut cli).map_err(|e| {
-         io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid pattern: {e}"))
++        io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid option: {e}"))
      })?;
 -
 -    list_directory(&cli.path, &options)
