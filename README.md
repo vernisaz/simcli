@@ -100,3 +100,6 @@ Do not forget to check out [the common scripts](https://github.com/vernisaz/sims
 - [SimTee](https://github.com/vernisaz/simtee)
 - [SimLogTail](https://github.com/vernisaz/simlogtail)
 - [SimHTTP](https://github.com/vernisaz/simhttp)
+ 
+## Converting CLAP based projects to SimCli
+I added [a small example](./clap%20to%20simcli/tree.diff) how to replace CLAP by SimCli.
