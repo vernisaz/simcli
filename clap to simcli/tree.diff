@@ -57,7 +57,7 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..d8b6655 100644
+index 24e1993..35f1a4e 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
 @@ -1,258 +1,234 @@
@@ -480,7 +480,7 @@ index 24e1993..d8b6655 100644
 +            env!("VERSION")
 +        );
 +        println!(
-+            "crates.io dependency free: https://www.linkedin.com/pulse/rust-people-like-myself-dmitriy-rogatkin-tqyoc"
++            "crates.io dependency free: https://www.linkedin.com/pulse/how-get-rid-crates-io-dmitriy-rogatkin-8lftc"
 +        );
 +        return Ok(());
 +    }
