@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..35f1a4e 100644
+index 24e1993..fd5113c 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,234 @@
+@@ -1,258 +1,245 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -388,20 +388,20 @@ index 24e1993..35f1a4e 100644
 -        no_indent: cli.no_indent,
 -        print_size: cli.print_size,
 -        human_readable: cli.human_readable,
-+        all_files: cli.get_opt("a").unwrap() == Some(&OptVal::Empty), //all_files,
++        all_files: cli.get_opt("a").unwrap() == Some(&OptVal::Empty),
 +        level: if let Some(OptVal::Num(level)) = cli.get_opt("L").unwrap() {
 +            Some(*level as u32)
 +        } else {
 +            None
-+        }, //cli.level,
-+        full_path: cli.get_opt("f").unwrap() == Some(&OptVal::Empty), // cli.full_path,
-+        dir_only: cli.get_opt("d").unwrap() == Some(&OptVal::Empty),  // cli.dir_only,
-+        no_indent: cli.get_opt("-no-indent").unwrap() == Some(&OptVal::Empty), // cli.no_indent,
-+        print_size: cli.get_opt("s").unwrap() == Some(&OptVal::Empty), // cli.print_size,
-+        human_readable: cli.get_opt("H").unwrap() == Some(&OptVal::Empty), // cli.human_readable,
++        },
++        full_path: cli.get_opt("f").unwrap() == Some(&OptVal::Empty),
++        dir_only: cli.get_opt("d").unwrap() == Some(&OptVal::Empty),
++        no_indent: cli.get_opt("-no-indent").unwrap() == Some(&OptVal::Empty),
++        print_size: cli.get_opt("s").unwrap() == Some(&OptVal::Empty),
++        human_readable: cli.get_opt("H").unwrap() == Some(&OptVal::Empty),
          pattern_glob,
 -        match_dirs: cli.match_dirs,
-+        match_dirs: cli.get_opt("-matchdirs").unwrap() == Some(&OptVal::Empty), // cli.match_dirs,
++        match_dirs: cli.get_opt("-matchdirs").unwrap() == Some(&OptVal::Empty),
          exclude_patterns,
 -        color: cli.color,
 -        no_color: cli.no_color,
@@ -419,12 +419,12 @@ index 24e1993..35f1a4e 100644
 -        icons: cli.icons,
 -        prune: cli.prune,
 -        gitignore: cli.gitignore,
-+        color: cli.get_opt("-color").unwrap() == Some(&OptVal::Empty), // cli.color,
-+        no_color: cli.get_opt("n").unwrap() == Some(&OptVal::Empty),   // cli.no_color,
-+        ascii: cli.get_opt(if cfg!(windows) { "z" } else { "A" }).unwrap() == Some(&OptVal::Empty), // cli.ascii,
-+        sort_by_time: cli.get_opt("t").unwrap() == Some(&OptVal::Empty), // cli.sort_by_time,
-+        reverse: cli.get_opt("r").unwrap() == Some(&OptVal::Empty),      // cli.reverse,
-+        print_mod_date: cli.get_opt("D").unwrap() == Some(&OptVal::Empty), // cli.print_mod_date,
++        color: cli.get_opt("-color").unwrap() == Some(&OptVal::Empty),
++        no_color: cli.get_opt("n").unwrap() == Some(&OptVal::Empty),
++        ascii: cli.get_opt(if cfg!(windows) { "z" } else { "A" }).unwrap() == Some(&OptVal::Empty),
++        sort_by_time: cli.get_opt("t").unwrap() == Some(&OptVal::Empty),
++        reverse: cli.get_opt("r").unwrap() == Some(&OptVal::Empty),
++        print_mod_date: cli.get_opt("D").unwrap() == Some(&OptVal::Empty),
 +        output_file: if let Some(OptVal::Str(path)) = cli.get_opt("o").unwrap() {
 +            Some(path.to_string())
 +        } else {
@@ -435,28 +435,37 @@ index 24e1993..35f1a4e 100644
 +        } else {
 +            None
 +        }, // cli.file_limit,
-+        dirs_first: cli.get_opt("-dirsfirst").unwrap() == Some(&OptVal::Empty), // cli.dirs_first,
-+        classify: cli.get_opt("F").unwrap() == Some(&OptVal::Empty),     // cli.classify,
-+        no_report: cli.get_opt("-noreport").unwrap() == Some(&OptVal::Empty), // cli.no_report,
-+        print_permissions: cli.get_opt("p").unwrap() == Some(&OptVal::Empty), // cli.print_permissions,
-+        from_file: cli.get_opt("-fromfile").unwrap() == Some(&OptVal::Empty), // cli.fromfile,
-+        icons: cli.get_opt("-icons").unwrap() == Some(&OptVal::Empty),        // cli.icons,
-+        prune: cli.get_opt("-prune").unwrap() == Some(&OptVal::Empty),        // cli.prune,
-+        gitignore: cli.get_opt("-gitignore").unwrap() == Some(&OptVal::Empty), // cli.gitignore,
++        dirs_first: cli.get_opt("-dirsfirst").unwrap() == Some(&OptVal::Empty), 
++        classify: cli.get_opt("F").unwrap() == Some(&OptVal::Empty),
++        no_report: cli.get_opt("-noreport").unwrap() == Some(&OptVal::Empty),
++        print_permissions: cli.get_opt("p").unwrap() == Some(&OptVal::Empty),
++        from_file: cli.get_opt("-fromfile").unwrap() == Some(&OptVal::Empty),
++        icons: cli.get_opt("-icons").unwrap() == Some(&OptVal::Empty),
++        prune: cli.get_opt("-prune").unwrap() == Some(&OptVal::Empty),
++        gitignore: cli.get_opt("-gitignore").unwrap() == Some(&OptVal::Empty),
      })
  }
++trait WithMut {
++    fn with_mut<'s, R, F>(&'s mut self, mut f: F) -> R
++    where
++        F: FnMut(&'s mut Self) -> R,
++    {
++        f(self)
++    }
++}
  
++impl<T: ?Sized> WithMut for T {}
  /// Main CLI execution function
  pub fn run_cli() -> io::Result<()> {
 -    let cli = Cli::parse();
 -    let options = cli_to_options(&cli).map_err(|e| {
 -        io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid pattern: {e}"))
-+    let mut cli = define_cli(CLI::new()).unwrap();
-+    let options = cli_to_options(&mut cli).map_err(|e| {
-+        io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid option: {e}"))
-     })?;
+-    })?;
 -
 -    list_directory(&cli.path, &options)
++    let mut cli = define_cli(CLI::new()).unwrap();
++    let options = cli_to_options(&mut cli)
++        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid option: {e}")))?;
 +    if let Some(bad_opts) = cli.get_errors() {
 +        return Err(io::Error::other(format!(
 +            "The following options {bad_opts:?} are not recognized or duplicated"
@@ -468,8 +477,11 @@ index 24e1993..35f1a4e 100644
 +            "{}",
 +            cli.get_description()
 +                .ok_or(io::Error::other("no help specified"))?
-+                .bright()
-+                .blue()
++                .with_mut(|m| if options.no_color {
++                    <String as Clone>::clone(&m).default()
++                } else {
++                    <String as Clone>::clone(&m).bright().blue()
++                })
 +        );
 +        return Ok(());
 +    }
