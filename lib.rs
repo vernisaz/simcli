@@ -415,7 +415,7 @@ impl CLI {
             }
             //descr += "\n";
             if let Some(some_descr) = &opt.descr {
-                descr += &format!("\n\t\t{}", wrap_text(some_descr, 67, "\t\t"));
+                descr += &format!("\n\t\t{}", wrap_text(some_descr, 57, "\t\t", Some('-')));
             }
         }
         if descr.is_empty() { None } else { Some(descr) }
@@ -810,7 +810,7 @@ impl CliNoMut {
     }
 }
 
-fn wrap_text(input: &str, max_len: usize, ident: &str) -> String {
+fn wrap_text(input: &str, max_len: usize, ident: &str, hyphen: Option<char>) -> String {
     if max_len == 0 {
         return input.to_string(); // Avoid division by zero or infinite loop
     }
@@ -839,7 +839,9 @@ fn wrap_text(input: &str, max_len: usize, ident: &str) -> String {
                 result.push(c);
                 count += 1;
                 if count == max_len {
-                    result.push('-');
+                    if let Some(hyphen) = hyphen {
+                        result.push(hyphen);
+                    }
                     result.push('\n');
                     result.push_str(ident);
                     count = 0;
