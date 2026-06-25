@@ -810,7 +810,7 @@ impl CliNoMut {
     }
 }
 
-fn wrap_text(input: &str, max_len: usize, alignment: &str) -> String {
+fn wrap_text(input: &str, max_len: usize, ident: &str) -> String {
     if max_len == 0 {
         return input.to_string(); // Avoid division by zero or infinite loop
     }
@@ -824,30 +824,31 @@ fn wrap_text(input: &str, max_len: usize, alignment: &str) -> String {
         // If adding this word would exceed the limit, start a new line
         if line_len > 0 && line_len + 1 + word_len > max_len {
             result.push('\n');
-            result.push_str(alignment);
+            result.push_str(ident);
             line_len = 0;
         } else if line_len > 0 {
             result.push(' ');
             line_len += 1;
         }
 
-        result.push_str(word);
-        line_len += word_len;
-
         // If a single word is longer than max_len, break it
         if word_len > max_len {
-            let mut chars = word.chars();
+            let chars = word.chars();
             let mut count = 0;
-            while let Some(c) = chars.next() {
+            for c in chars {
                 result.push(c);
                 count += 1;
                 if count == max_len {
+                    result.push('-');
                     result.push('\n');
-                    result.push_str(alignment);
+                    result.push_str(ident);
                     count = 0;
                 }
             }
             line_len = count;
+        } else {
+            result.push_str(word);
+            line_len += word_len;
         }
     }
 
