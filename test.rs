@@ -12,10 +12,10 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
         }
         let _ = cli.opt("k", OptTyp::None).inspect_err(|e| eprintln!("{e}"));
         cli.opt("n", OptTyp::Str)?
-            .description("Name of the person to greet")
+            .description("Name of a person to greet")
             .opt("c", OptTyp::Num)?
             .alias("-count")?
-            .description("Number of times to greet [default: 1], the description intentially made long for testing lines wrapping")
+            .description("Number of times to greet [default: 1], the description intentionally made long for testing lines wrapping")
             .opt("h", OptTyp::None)?
             .alias("-help")?
             .description("Print help")
