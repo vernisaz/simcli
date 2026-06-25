@@ -14,7 +14,8 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
         cli.opt("n", OptTyp::Str)?
             .description("Name of the person to greet")
             .opt("c", OptTyp::Num)?
-            .description("Number of times to greet [default: 1]")
+            .alias("-count")?
+            .description("Number of times to greet [default: 1], the description intentially made long for testing lines wrapping")
             .opt("h", OptTyp::None)?
             .alias("-help")?
             .description("Print help")
@@ -27,7 +28,7 @@ fn test_cli(cli: &CliNoMut) -> Result<(), Box<dyn Error>> {
             .opt("-long", OptTyp::Str)?
             .description("Long definition")
             .opt("-pat", OptTyp::ArrStr)?
-            .description("Long multiple patters")
+            .description("Long multiple patterns")
             .use_oper()
             .oper_description(
                 r#"Where operations are:

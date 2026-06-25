@@ -395,15 +395,27 @@ impl CLI {
         if let Some(some_descr) = &self.oper_descr {
             descr += &format!("\n{some_descr}")
         }
+
         for opt in &self.opts {
-            descr += &format!("\n{OPT_PREFIX}{}", opt.nme);
-            if let Some(some_descr) = &opt.descr {
-                descr += &format!("\t{some_descr}");
-                if let Some(aliases) = &opt.other {
-                    for alias in aliases {
-                        descr += &format!("\n{OPT_PREFIX}{alias}\t''");
-                    }
+            let opt_val_desc = || -> &str {
+                match opt.t {
+                    OptTyp::Num => " number",
+                    OptTyp::FNum => " float",
+                    OptTyp::Str => " string",
+                    OptTyp::InStr => "name=value",
+                    OptTyp::ArrStr => " string [...]",
+                    _ => "",
                 }
+            };
+            descr += &format!("\n{OPT_PREFIX}{}{}", opt.nme, opt_val_desc());
+            if let Some(aliases) = &opt.other {
+                for alias in aliases {
+                    descr += &format!(", {OPT_PREFIX}{alias}{}", opt_val_desc());
+                }
+            }
+            //descr += "\n";
+            if let Some(some_descr) = &opt.descr {
+                descr += &format!("\n\t\t{}", wrap_text(some_descr, 67, "\t\t"));
             }
         }
         if descr.is_empty() { None } else { Some(descr) }
@@ -796,4 +808,48 @@ impl CliNoMut {
     pub fn get_errors(&self) -> Option<Vec<String>> {
         self.cli.borrow_mut().get_errors().cloned()
     }
+}
+
+fn wrap_text(input: &str, max_len: usize, alignment: &str) -> String {
+    if max_len == 0 {
+        return input.to_string(); // Avoid division by zero or infinite loop
+    }
+
+    let mut result = String::new();
+    let mut line_len = 0;
+
+    for word in input.split_whitespace() {
+        let word_len = word.chars().count();
+
+        // If adding this word would exceed the limit, start a new line
+        if line_len > 0 && line_len + 1 + word_len > max_len {
+            result.push('\n');
+            result.push_str(alignment);
+            line_len = 0;
+        } else if line_len > 0 {
+            result.push(' ');
+            line_len += 1;
+        }
+
+        result.push_str(word);
+        line_len += word_len;
+
+        // If a single word is longer than max_len, break it
+        if word_len > max_len {
+            let mut chars = word.chars();
+            let mut count = 0;
+            while let Some(c) = chars.next() {
+                result.push(c);
+                count += 1;
+                if count == max_len {
+                    result.push('\n');
+                    result.push_str(alignment);
+                    count = 0;
+                }
+            }
+            line_len = count;
+        }
+    }
+
+    result
 }
