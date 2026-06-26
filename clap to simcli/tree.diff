@@ -57,10 +57,10 @@ index 181a15a..8754e43 100644
  fn main() {
      match run_cli() {
 diff --git a/src/rust_tree/cli.rs b/src/rust_tree/cli.rs
-index 24e1993..fd5113c 100644
+index 24e1993..a3f0c50 100644
 --- a/src/rust_tree/cli.rs
 +++ b/src/rust_tree/cli.rs
-@@ -1,258 +1,245 @@
+@@ -1,258 +1,248 @@
  // CLI module - handles cli flag parsing
  
 -use clap::Parser;
@@ -74,6 +74,7 @@ index 24e1993..fd5113c 100644
 +use simcolor::Colorized;
 +use std::error::Error;
 +use std::io;
++use std::env;
  
  // Custom function to validate the glob pattern
  pub fn parse_glob_pattern(s: &str) -> Result<Pattern, String> {
@@ -496,11 +497,13 @@ index 24e1993..fd5113c 100644
 +        );
 +        return Ok(());
 +    }
++    let current_dir;
 +    list_directory(
 +        if !cli.args().is_empty() {
 +            &cli.args()[0]
 +        } else {
-+            "."
++            current_dir = env::current_dir()?.display().to_string();
++            &current_dir
 +        },
 +        &options,
 +    )
