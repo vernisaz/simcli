@@ -10,9 +10,9 @@ use std::{
 };
 
 #[cfg(unix)]
-const OPT_PREFIX: char = '-';
+pub const OPT_PREFIX: char = '-';
 #[cfg(windows)]
-const OPT_PREFIX: char = '/';
+pub const OPT_PREFIX: char = '/';
 const VERSION: &str = env!("VERSION");
 
 /// Returns a version of the create
