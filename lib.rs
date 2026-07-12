@@ -44,7 +44,7 @@ pub enum OptTyp {
 ///
 /// * None - not treated
 /// * Once - only one time first match
-/// * All - occurance
+/// * All - occurances
 #[derive(PartialEq, Debug, Default)]
 pub enum WildCardExpansion {
     #[default]
@@ -241,8 +241,9 @@ pub struct CLI {
     oper_requested: bool,
     oper_descr: Option<String>,
     glob_mode: WildCardExpansion,
+    first_wildcard: bool,
     unprocessed: bool,
-    unknown: Vec<String>,  // and add misused
+    unknown: Vec<String>, // and add 'misused' for valid options but wrongly used
     src_args: Vec<String>, // TODO separate field as immutable
 }
 impl CLI {
@@ -369,6 +370,13 @@ impl CLI {
     ///
     pub fn process_wildcard(&mut self, mode: WildCardExpansion) -> &mut Self {
         self.glob_mode = mode;
+        self
+    }
+    /// A first argument may include wildcard and in this case it get once extended
+    ///
+    #[cfg(target_os = "windows")]
+    pub fn wildcard_for_first(&mut self) -> &mut Self {
+        self.first_wildcard = true;
         self
     }
     /// Specify an operation description
@@ -674,15 +682,22 @@ impl CLI {
             } else if !cfg!(windows) {
                 self.args.push(arg)
             } else {
-                match self.glob_mode {
-                    WildCardExpansion::None => self.args.push(arg),
-                    WildCardExpansion::Once => match Glob::from(&arg).next() {
+                if self.first_wildcard && self.args.is_empty() {
+                    match Glob::from(&arg).next() {
                         None => self.args.push(arg),
                         Some(arg) => self.args.push(arg),
-                    },
-                    WildCardExpansion::All => {
-                        for arg in Glob::from(&arg) {
-                            self.args.push(arg)
+                    }
+                } else {
+                    match self.glob_mode {
+                        WildCardExpansion::None => self.args.push(arg),
+                        WildCardExpansion::Once => match Glob::from(&arg).next() {
+                            None => self.args.push(arg),
+                            Some(arg) => self.args.push(arg),
+                        },
+                        WildCardExpansion::All => {
+                            for arg in Glob::from(&arg) {
+                                self.args.push(arg)
+                            }
                         }
                     }
                 }
@@ -762,6 +777,14 @@ impl CliNoMut {
     pub fn process_wildcard(&self, mode: WildCardExpansion) -> &Self {
         let mut cli = self.cli.borrow_mut();
         cli.glob_mode = mode;
+        self
+    }
+    /// A first argument may include wildcard and in this case it get once extended
+    ///
+    #[cfg(target_os = "windows")]
+    pub fn wildcard_for_first(&mut self) -> &Self {
+        let mut cli = self.cli.borrow_mut();
+        cli.first_wildcard = true;
         self
     }
     /// Specify an operation description
