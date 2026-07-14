@@ -89,17 +89,19 @@ you get a convenient error report as:
 > thread 'main' (14676) panicked at C:\Users\sunil\projects\simcli\test.rs:86:69:
 called `Result::unwrap()` on an `Err` value: OptError { problem_type: NoOption, cause: "The option (-pattern) isn't defined" }
 
-Helping to correct the problem.
+helping to correct the problem.
 
 ## How to build the crate
 The crate can be built either using [RB](https://github.com/vernisaz/rust_bee) (.7b script provided) or
 Cargo (.toml manifest can be easy added, since there are no dependencies).
-Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when you use *RB*.
+Do not forget to check out [the common scripts](https://github.com/vernisaz/simscript) when you use **RB**.
 
 ## Where it's used
 - [SimTee](https://github.com/vernisaz/simtee)
 - [SimLogTail](https://github.com/vernisaz/simlogtail)
 - [SimHTTP](https://github.com/vernisaz/simhttp)
+- [Simple Zip](https://github.com/vernisaz/simple_rust_zip)
+- [Tree - clap free](https://github.com/peteretelej/tree) - SimCLI [replaces](./clap%20to%20simcli/tree.diff) CLAP in the project
  
 ## Converting CLAP based projects to SimCli
-I added [a small example](./clap%20to%20simcli/tree.diff) how to replace CLAP by SimCli.
+There is [a small article](https://www.linkedin.com/pulse/how-get-rid-crates-io-dmitriy-rogatkin-8lftc) describing how to replace CLAP by SimCli.
