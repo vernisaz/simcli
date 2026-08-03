@@ -108,7 +108,7 @@ impl Glob {
     fn from(str: &str) -> Self {
         let mut parent = PathBuf::from(str);
         if let Some(file_name) = parent.file_name()
-            && let file_name = file_name.display().to_string()
+            && let file_name = file_name.display().to_string().to_ascii_uppercase()
             && let Some((before, after)) = file_name.split_once('*')
         {
             parent.pop();
@@ -143,7 +143,8 @@ impl Iterator for Glob {
                     None => break None,
                     Some(entry) => {
                         if let Ok(entry) = entry {
-                            let file_name = entry.file_name();
+                            let mut file_name = entry.file_name();
+                            file_name.make_ascii_uppercase();
                             if file_name.len() >= pattern_len
                                 && file_name
                                     .as_encoded_bytes()
