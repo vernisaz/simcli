@@ -278,6 +278,22 @@ impl CLI {
         }
     }
 
+    /// Create an empty CLI arguments descriptor from a vector and program arguments to parse after
+    ///
+    pub fn combined(mut src_args: Vec<String>) -> Self {
+        let mut args = env::args();
+        args.next(); // swallow first
+        src_args.extend(args);
+        CLI {
+            args: vec![],
+            opts: vec![],
+            unprocessed: true,
+            unknown: vec![],
+            src_args,
+            ..Default::default()
+        }
+    }
+
     /// Creates a new argument option
     ///
     /// # Examples
@@ -728,6 +744,22 @@ impl CliNoMut {
     pub fn new() -> Self {
         CliNoMut {
             cli: RefCell::new(CLI::new()),
+        }
+    }
+
+    /// Create an empty CLI arguments descriptor from a vector
+    ///
+    pub fn from(src_args: Vec<String>) -> Self {
+        CliNoMut {
+            cli: RefCell::new(CLI::from(src_args)),
+        }
+    }
+
+    /// Create an empty CLI arguments descriptor from a vector and program arguments
+    ///
+    pub fn combined(src_args: Vec<String>) -> Self {
+        CliNoMut {
+            cli: RefCell::new(CLI::combined(src_args)),
         }
     }
 
