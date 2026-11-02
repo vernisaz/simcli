@@ -90,8 +90,13 @@ And options are:"#,
     Ok(())
 }
 
+use std::fs;
 fn main() -> Result<(), Box<dyn Error>> {
-    let cli = CliNoMut::new();
+    let mut cmd = vec![];
+    if let Ok(file_content) = fs::read_to_string("test.arg") {
+        cmd.extend(file_content.split(' ').map(str::to_string))
+    }
+    let cli = CliNoMut::combined(cmd);
     cli.description("For testing CLI module");
     #[cfg(test)]
     test_cli(&cli)
